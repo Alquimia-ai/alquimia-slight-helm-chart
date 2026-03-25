@@ -1,0 +1,55 @@
+{{- if .Values.bff.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "alquimia-slight.bff.fullname" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bff
+spec:
+  replicas: {{ .Values.bff.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "alquimia-slight.bff.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "alquimia-slight.bff.fullname" . }}
+        app.kubernetes.io/component: bff
+    spec:
+      serviceAccountName: {{ include "alquimia-slight.serviceAccountName" . }}
+      imagePullSecrets:
+{{- range .Values.global.imagePullSecrets }}
+        - name: {{ . }}
+{{- end }}
+      containers:
+        - name: bff
+          image: "{{ .Values.bff.image.repository }}:{{ .Values.bff.image.tag }}"
+          imagePullPolicy: {{ .Values.bff.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.bff.service.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "alquimia-slight.bff.fullname" . }}-config
+            - secretRef:
+                name: {{ include "alquimia-slight.bff.fullname" . }}-secret
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+{{ toYaml .Values.bff.resources | indent 12 }}
+{{- end }}

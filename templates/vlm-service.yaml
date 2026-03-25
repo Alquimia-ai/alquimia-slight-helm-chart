@@ -1,0 +1,17 @@
+{{- if .Values.vlm.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "alquimia-slight.vlm.fullname" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vlm
+spec:
+  type: {{ .Values.vlm.service.type }}
+  selector:
+    app: {{ include "alquimia-slight.vlm.fullname" . }}
+  ports:
+    - name: http
+      port: {{ .Values.vlm.service.port }}
+      targetPort: http
+{{- end }}

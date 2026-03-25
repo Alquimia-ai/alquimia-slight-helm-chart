@@ -1,0 +1,14 @@
+Alquimia Slight deployed.
+
+Components:
+- Engine: {{ include "alquimia-slight.engine.fullname" . }}
+- BFF: {{ include "alquimia-slight.bff.fullname" . }}
+- PostgreSQL: {{ include "alquimia-slight.postgres.fullname" . }}
+- MinIO: {{ include "alquimia-slight.minio.fullname" . }}
+- VLM: {{ include "alquimia-slight.vlm.fullname" . }}
+
+Prerequisites:
+- k3s
+- Longhorn
+- NVIDIA runtime/device plugin if VLM is enabled
+- RHEL 10 AI target appliance

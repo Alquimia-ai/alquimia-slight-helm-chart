@@ -1,0 +1,53 @@
+{{- if .Values.engine.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "alquimia-slight.engine.fullname" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: engine
+spec:
+  replicas: {{ .Values.engine.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "alquimia-slight.engine.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "alquimia-slight.engine.fullname" . }}
+        app.kubernetes.io/component: engine
+    spec:
+      serviceAccountName: {{ include "alquimia-slight.serviceAccountName" . }}
+      imagePullSecrets:
+{{- range .Values.global.imagePullSecrets }}
+        - name: {{ . }}
+{{- end }}
+      containers:
+        - name: engine
+          image: "{{ .Values.engine.image.repository }}:{{ .Values.engine.image.tag }}"
+          imagePullPolicy: {{ .Values.engine.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.engine.service.port }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "alquimia-slight.engine.fullname" . }}-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+{{ toYaml .Values.engine.resources | indent 12 }}
+{{- end }}

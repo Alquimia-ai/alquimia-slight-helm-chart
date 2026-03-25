@@ -1,0 +1,20 @@
+{{- if .Values.minio.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "alquimia-slight.minio.fullname" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: minio
+spec:
+  type: ClusterIP
+  selector:
+    app: {{ include "alquimia-slight.minio.fullname" . }}
+  ports:
+    - name: api
+      port: {{ .Values.minio.service.apiPort }}
+      targetPort: api
+    - name: console
+      port: {{ .Values.minio.service.consolePort }}
+      targetPort: console
+{{- end }}

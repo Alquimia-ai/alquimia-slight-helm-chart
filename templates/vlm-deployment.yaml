@@ -1,0 +1,58 @@
+{{- if .Values.vlm.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "alquimia-slight.vlm.fullname" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vlm
+spec:
+  replicas: {{ .Values.vlm.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "alquimia-slight.vlm.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "alquimia-slight.vlm.fullname" . }}
+        app.kubernetes.io/component: vlm
+    spec:
+      runtimeClassName: {{ .Values.vlm.runtimeClassName }}
+      imagePullSecrets:
+{{- range .Values.global.imagePullSecrets }}
+        - name: {{ . }}
+{{- end }}
+      containers:
+        - name: vllm
+          image: "{{ .Values.vlm.image.repository }}@{{ .Values.vlm.image.digest }}"
+          imagePullPolicy: {{ .Values.vlm.image.pullPolicy }}
+          args:
+{{ toYaml .Values.vlm.args | indent 12 }}
+            - "--api-key"
+            - "$(VLLM_API_KEY)"
+          env:
+            - name: VLLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alquimia-slight.vlm.fullname" . }}-secret
+                  key: VLLM_API_KEY
+            - name: HF_HOME
+              value: {{ .Values.vlm.env.HF_HOME | quote }}
+            - name: HF_HUB_OFFLINE
+              value: {{ .Values.vlm.env.HF_HUB_OFFLINE | quote }}
+            - name: TRANSFORMERS_OFFLINE
+              value: {{ .Values.vlm.env.TRANSFORMERS_OFFLINE | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.vlm.service.port }}
+          volumeMounts:
+            - name: model-store
+              mountPath: /models
+          resources:
+{{ toYaml .Values.vlm.resources | indent 12 }}
+      volumes:
+        - name: model-store
+          hostPath:
+            path: {{ .Values.vlm.model.hostPath }}
+            type: Directory
+{{- end }}

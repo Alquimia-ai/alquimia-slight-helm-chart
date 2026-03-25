@@ -1,0 +1,25 @@
+global:
+  storageClass: longhorn
+
+product:
+  os: "RHEL 10 AI"
+  targetPlatform: "appliance"
+
+vlm:
+  enabled: true
+  runtimeClassName: nvidia
+  model:
+    hostPath: /var/home/alquimia/models
+    path: /models/qwen3-vl-8b
+
+postgres:
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: longhorn
+
+minio:
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: longhorn

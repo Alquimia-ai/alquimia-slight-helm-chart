@@ -1,0 +1,17 @@
+{{- if .Values.bff.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "alquimia-slight.bff.fullname" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bff
+spec:
+  type: {{ .Values.bff.service.type }}
+  selector:
+    app: {{ include "alquimia-slight.bff.fullname" . }}
+  ports:
+    - name: http
+      port: {{ .Values.bff.service.port }}
+      targetPort: http
+{{- end }}

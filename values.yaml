@@ -1,0 +1,169 @@
+global:
+  storageClass: longhorn
+  imagePullSecrets:
+    - regcred
+
+product:
+  name: "Alquimia Slight"
+  suite: "Alquimia Vision"
+  targetPlatform: "appliance"
+  os: "RHEL 10 AI"
+
+serviceAccount:
+  create: true
+  name: ""
+
+engine:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: alquimiaai/argos-engine
+    tag: engine-v0.3.0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  config:
+    host: "0.0.0.0"
+    port: "8000"
+    logLevel: "debug"
+    bffBaseUrl: ""
+    natsUrl: ""
+    frameBufferSize: "5"
+    frameBatchSize: "1"
+    storiesBufferSize: "5"
+    storiesBatchSize: "2"
+    camerasConfig: "[{}]"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+bff:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: alquimiaai/argos-bff
+    tag: bff-v0.8.0-beta.0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  config:
+    host: "0.0.0.0"
+    port: "8000"
+    authDisabled: "true"
+    storageBucket: "argos-evidence"
+  secret:
+    jwtSecret: "change-me"
+    bootstrapAdminUsername: "adminBff"
+    bootstrapAdminPassword: "change-me"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16"
+    pullPolicy: IfNotPresent
+  auth:
+    database: bffdb
+    username: bffUser
+    password: change-me
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  service:
+    port: 5432
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+minio:
+  enabled: true
+  image:
+    repository: quay.io/minio/minio
+    tag: latest
+    pullPolicy: IfNotPresent
+  rootUser: "change-me"
+  rootPassword: "change-me"
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+  service:
+    apiPort: 9000
+    consolePort: 9001
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+
+vlm:
+  enabled: true
+  replicaCount: 1
+  runtimeClassName: nvidia
+  image:
+    repository: vllm/vllm-openai
+    digest: "sha256:2296a2a7e1ce1dc59c6577ba5900f4e9910b76c4a0cb134833a8137f92404dfa"
+    pullPolicy: IfNotPresent
+  model:
+    name: qwen3-vl-8b
+    path: /models/qwen3-vl-8b
+    hostPath: /var/home/alquimia/models
+    apiKey: "change-me"
+  service:
+    type: ClusterIP
+    port: 8000
+  args:
+    - "--model"
+    - "/models/qwen3-vl-8b"
+    - "--host"
+    - "0.0.0.0"
+    - "--port"
+    - "8000"
+    - "--max-model-len"
+    - "3000"
+    - "--gpu-memory-utilization"
+    - "0.90"
+    - "--trust-remote-code"
+  env:
+    HF_HOME: /models/hf-cache
+    HF_HUB_OFFLINE: "1"
+    TRANSFORMERS_OFFLINE: "1"
+  resources:
+    requests:
+      cpu: "8"
+      memory: "24Gi"
+      nvidia.com/gpu: "1"
+    limits:
+      cpu: "12"
+      memory: "32Gi"
+      nvidia.com/gpu: "1"
+
+nats:
+  enabled: true
+  config:
+    cluster:
+      enabled: false
+    jetstream:
+      enabled: false
+  natsBox:
+    enabled: false

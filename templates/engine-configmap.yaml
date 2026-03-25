@@ -1,0 +1,20 @@
+{{- if .Values.engine.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "alquimia-slight.engine.fullname" . }}-config
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: engine
+data:
+  ARGOS_HOST: {{ .Values.engine.config.host | quote }}
+  ARGOS_PORT: {{ .Values.engine.config.port | quote }}
+  ARGOS_LOG_LEVEL: {{ .Values.engine.config.logLevel | quote }}
+  ARGOS_BFF_BASE_URL: {{ default (printf "http://%s:%v" (include "alquimia-slight.bff.fullname" .) .Values.bff.service.port) .Values.engine.config.bffBaseUrl | quote }}
+  ARGOS_NATS_URL: {{ default "nats://{{ .Release.Name }}-nats:4222" .Values.engine.config.natsUrl | quote }}
+  ARGOS_BUFFER_FRAME_BUFFER_SIZE: {{ .Values.engine.config.frameBufferSize | quote }}
+  ARGOS_BUFFER_FRAME_BATCH_SIZE: {{ .Values.engine.config.frameBatchSize | quote }}
+  ARGOS_BUFFER_STORIES_BUFFER_SIZE: {{ .Values.engine.config.storiesBufferSize | quote }}
+  ARGOS_BUFFER_STORIES_BATCH_SIZE: {{ .Values.engine.config.storiesBatchSize | quote }}
+  ARGOS_CAMERAS_CONFIG: {{ .Values.engine.config.camerasConfig | quote }}
+{{- end }}

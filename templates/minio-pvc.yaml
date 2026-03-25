@@ -1,0 +1,16 @@
+{{- if and .Values.minio.enabled .Values.minio.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "alquimia-slight.minio.fullname" . }}-data
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: minio
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.minio.persistence.size }}
+  storageClassName: {{ default .Values.global.storageClass .Values.minio.persistence.storageClass }}
+{{- end }}

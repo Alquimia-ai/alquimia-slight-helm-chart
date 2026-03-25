@@ -1,0 +1,17 @@
+{{- if .Values.bff.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "alquimia-slight.bff.fullname" . }}-config
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bff
+data:
+  ARGOS_BFF_NATS_URL: "nats://{{ .Release.Name }}-nats:4222"
+  ARGOS_BFF_ENGINE_BASE_URL: "http://{{ include "alquimia-slight.engine.fullname" . }}:{{ .Values.engine.service.port }}"
+  ARGOS_BFF_STORAGE_ENDPOINT: "http://{{ include "alquimia-slight.minio.fullname" . }}:{{ .Values.minio.service.apiPort }}"
+  ARGOS_BFF_STORAGE_BUCKET: {{ .Values.bff.config.storageBucket | quote }}
+  ARGOS_BFF_HOST: {{ .Values.bff.config.host | quote }}
+  ARGOS_BFF_PORT: {{ .Values.bff.config.port | quote }}
+  ARGOS_BFF_AUTH_DISABLED: {{ .Values.bff.config.authDisabled | quote }}
+{{- end }}
