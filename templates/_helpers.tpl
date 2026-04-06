@@ -51,3 +51,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "alquimia-slight.vlm.fullname" -}}
 {{- printf "%s-vlm" (include "alquimia-slight.fullname" .) -}}
 {{- end -}}
+
+{{- define "alquimia-slight.web.fullname" -}}
+{{- printf "%s-web" (include "alquimia-slight.fullname" .) -}}
+{{- end -}}

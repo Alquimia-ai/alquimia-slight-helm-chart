@@ -167,3 +167,37 @@ nats:
       enabled: false
   natsBox:
     enabled: false
+
+web:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: alquimiaai/argos-web
+    tag: web-v0.6.1-beta.0
+    pullPolicy: IfNotPresent
+  service:
+    type: NodePort
+    port: 8080
+    targetPort: 80
+    nodePort: 31000
+  config:
+    viteAppTimeZone: "America/Argentina/Buenos_Aires"
+    viteBffUrl: ""
+    mediamtxPublicHost: ""
+    mediamtxWebrtcAllowOrigins: ""
+    mediamtxWebrtcAdditionalHosts: ""
+  readinessProbe:
+    path: /
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  livenessProbe:
+    path: /
+    initialDelaySeconds: 15
+    periodSeconds: 20
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi

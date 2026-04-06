@@ -1,0 +1,49 @@
+{{- if .Values.web.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "alquimia-slight.web.fullname" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+spec:
+  replicas: {{ .Values.web.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "alquimia-slight.web.fullname" . }}
+  template:
+    metadata:
+      labels:
+        app: {{ include "alquimia-slight.web.fullname" . }}
+        app.kubernetes.io/component: web
+    spec:
+      serviceAccountName: {{ include "alquimia-slight.serviceAccountName" . }}
+      imagePullSecrets:
+{{- range .Values.global.imagePullSecrets }}
+        - name: {{ . }}
+{{- end }}
+      containers:
+        - name: web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.web.service.targetPort }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "alquimia-slight.web.fullname" . }}-config
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.web.readinessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.web.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.readinessProbe.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.web.livenessProbe.path }}
+              port: http
+            initialDelaySeconds: {{ .Values.web.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.web.livenessProbe.periodSeconds }}
+          resources:
+{{ toYaml .Values.web.resources | indent 12 }}
+{{- end }}
