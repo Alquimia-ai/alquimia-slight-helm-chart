@@ -11,9 +11,19 @@ data:
   ARGOS_PORT: {{ .Values.engine.config.port | quote }}
   ARGOS_LOG_LEVEL: {{ .Values.engine.config.logLevel | quote }}
   ARGOS_BFF_BASE_URL: {{ default (printf "http://%s:%v" (include "alquimia-slight.bff.fullname" .) .Values.bff.service.port) .Values.engine.config.bffBaseUrl | quote }}
-  ARGOS_NATS_URL: {{ default "nats://{{ .Release.Name }}-nats:4222" .Values.engine.config.natsUrl | quote }}
+  ARGOS_NATS_URL: {{ default (printf "nats://%s-nats:4222" .Release.Name) .Values.engine.config.natsUrl | quote }}
   ARGOS_BUFFER_FRAME_BUFFER_SIZE: {{ .Values.engine.config.frameBufferSize | quote }}
   ARGOS_BUFFER_FRAME_BATCH_SIZE: {{ .Values.engine.config.frameBatchSize | quote }}
   ARGOS_BUFFER_STORIES_BUFFER_SIZE: {{ .Values.engine.config.storiesBufferSize | quote }}
   ARGOS_BUFFER_STORIES_BATCH_SIZE: {{ .Values.engine.config.storiesBatchSize | quote }}
+  ARGOS_MEDIA_GATEWAY_PLAYBACK_BASE_URL: {{ .Values.engine.config.media.playbackBaseUrl | quote }}
+  ARGOS_MEDIA_GATEWAY_INTERNAL_READER_TOKEN: {{ .Values.engine.config.media.internalReaderToken | quote }}
+  ARGOS_STORAGE_ENDPOINT: {{ printf "http://%s:%v" (include "alquimia-slight.minio.fullname" .) .Values.minio.service.apiPort | quote }}
+  ARGOS_STORAGE_BUCKET: {{ .Values.bff.config.storageBucket | quote }}
+  ARGOS_STORAGE_ACCESS_KEY: {{ .Values.minio.rootUser | quote }}
+  ARGOS_STORAGE_SECRET_KEY: {{ .Values.minio.rootPassword | quote }}
+  ARGOS_EVIDENCE_PRE_SECONDS: {{ .Values.engine.config.evidence.preSeconds | quote }}
+  ARGOS_EVIDENCE_POST_SECONDS: {{ .Values.engine.config.evidence.postSeconds | quote }}
+  ARGOS_EVIDENCE_RETENTION_SECONDS: {{ .Values.engine.config.evidence.retentionSeconds | quote }}
+  ARGOS_EVIDENCE_FINALIZE_DELAY_SECONDS: {{ .Values.engine.config.evidence.finalizeDelaySeconds | quote }}
 {{- end }}

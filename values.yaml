@@ -33,6 +33,14 @@ engine:
     frameBatchSize: "1"
     storiesBufferSize: "5"
     storiesBatchSize: "2"
+    media:
+      playbackBaseUrl: ""
+      internalReaderToken: "change-me"
+    evidence:
+      preSeconds: "3"
+      postSeconds: "3"
+      retentionSeconds: "30"
+      finalizeDelaySeconds: "3.25"
   resources:
     requests:
       cpu: 100m
