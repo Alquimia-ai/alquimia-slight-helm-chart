@@ -28,10 +28,6 @@ spec:
     spec:
       dnsPolicy: {{ .Values.mediamtx.dnsPolicy }}
       hostNetwork: {{ .Values.mediamtx.hostNetwork }}
-      imagePullSecrets:
-{{- range .Values.global.imagePullSecrets }}
-        - name: {{ . }}
-{{- end }}
       containers:
         - name: mediamtx
           image: "{{ .Values.mediamtx.image.repository }}:{{ .Values.mediamtx.image.tag }}"

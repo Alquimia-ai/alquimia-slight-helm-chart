@@ -45,6 +45,7 @@ Before installing the chart, make sure the target environment has the following:
 - **Longhorn** installed and working as the persistent storage backend
 - Access to the required container images
 - A Kubernetes namespace where the product will be deployed
+- For **private** registries: a pull Secret in the **`alquimia-slight`** namespace (see [Private container registry (important)](#private-container-registry-important))
 
 ### Required when VLM is enabled
 
@@ -53,6 +54,20 @@ Before installing the chart, make sure the target environment has the following:
 - NVIDIA container runtime configured
 - NVIDIA device plugin deployed in the cluster
 - Model files available locally on the appliance/node
+
+## Private container registry (important)
+
+If you use a **private** container registry, create a **pull Secret** in the **`alquimia-slight`** namespace. This chart does not create registry credentials in Git. Reference the Secret name in `global.imagePullSecrets` (default: `regcred` in `values.yaml`).
+
+```bash
+kubectl create secret docker-registry regcred \
+  --docker-server=<registry-hostname> \
+  --docker-username=<username> \
+  --docker-password=<token-or-password> \
+  -n alquimia-slight
+```
+
+If you use a different Secret name, update `global.imagePullSecrets` accordingly.
 
 ## Components
 
