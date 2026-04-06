@@ -1,0 +1,9 @@
+{{- if and .Values.mediamtx.enabled .Values.mediamtx.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "alquimia-slight.mediamtx.namespace" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mediamtx
+{{- end }}

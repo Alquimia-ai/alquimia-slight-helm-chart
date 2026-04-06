@@ -55,3 +55,18 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "alquimia-slight.web.fullname" -}}
 {{- printf "%s-web" (include "alquimia-slight.fullname" .) -}}
 {{- end -}}
+
+{{- define "alquimia-slight.mediamtx.fullname" -}}
+{{- printf "%s-mediamtx" (include "alquimia-slight.fullname" .) -}}
+{{- end -}}
+
+{{- define "alquimia-slight.mediamtx.namespace" -}}
+{{- default .Release.Namespace .Values.mediamtx.namespace -}}
+{{- end -}}
+
+{{- define "alquimia-slight.mediamtx.authHttpAddress" -}}
+{{- $ns := default .Release.Namespace .Values.mediamtx.auth.bffNamespace -}}
+{{- $path := default "/internal/media/auth" .Values.mediamtx.auth.path -}}
+{{- $computed := printf "http://%s.%s.svc.cluster.local:%v%s" (include "alquimia-slight.bff.fullname" .) $ns .Values.bff.service.port $path -}}
+{{- default $computed .Values.mediamtx.auth.httpAddress -}}
+{{- end -}}

@@ -1,0 +1,17 @@
+{{- if and .Values.mediamtx.enabled .Values.mediamtx.persistence.enabled (not .Values.mediamtx.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "alquimia-slight.mediamtx.fullname" . }}-recordings
+  namespace: {{ include "alquimia-slight.mediamtx.namespace" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mediamtx
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.mediamtx.persistence.size }}
+  storageClassName: {{ default .Values.global.storageClass .Values.mediamtx.persistence.storageClass }}
+{{- end }}

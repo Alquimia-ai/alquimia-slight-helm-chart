@@ -1,0 +1,24 @@
+{{- if .Values.mediamtx.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "alquimia-slight.mediamtx.fullname" . }}
+  namespace: {{ include "alquimia-slight.mediamtx.namespace" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mediamtx
+spec:
+  type: {{ .Values.mediamtx.service.type }}
+  selector:
+    app: {{ include "alquimia-slight.mediamtx.fullname" . }}
+  ports:
+{{- range .Values.mediamtx.service.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort }}
+      protocol: {{ .protocol }}
+{{- if eq $.Values.mediamtx.service.type "NodePort" }}
+      nodePort: {{ .nodePort }}
+{{- end }}
+{{- end }}
+{{- end }}

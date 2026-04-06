@@ -201,3 +201,82 @@ web:
     limits:
       cpu: 500m
       memory: 512Mi
+
+mediamtx:
+  enabled: true
+  createNamespace: true
+  namespace: media
+  replicaCount: 1
+  image:
+    repository: alquimiaai/mediamtx
+    tag: v0.1.0
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+    existingClaim: ""
+  auth:
+    httpAddress: ""
+    bffNamespace: ""
+    path: /internal/media/auth
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  env:
+    MTX_API: "yes"
+    MTX_METRICS: "yes"
+    MTX_PLAYBACK: "yes"
+    MTX_HLSADDRESS: ":18888"
+    MTX_LOGLEVEL: info
+    MTX_LOGSTRUCTURED: "yes"
+    MTX_RTSPTRANSPORTS: tcp
+    MTX_AUTHMETHOD: http
+    MTX_PLAYBACKADDRESS: ":9996"
+    MTX_PATHDEFAULTS_RECORD: "yes"
+    MTX_PATHDEFAULTS_RECORDPATH: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+    MTX_PATHDEFAULTS_RECORDFORMAT: fmp4
+    MTX_PATHDEFAULTS_RECORDPARTDURATION: 1s
+    MTX_PATHDEFAULTS_RECORDSEGMENTDURATION: 30s
+    MTX_PATHDEFAULTS_RECORDDELETEAFTER: 30m
+    MTX_WEBRTCALLOWORIGINS: "http://192.168.77.5:31000,http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8080,http://localhost:8080"
+    MTX_WEBRTCADDITIONALHOSTS: "192.168.77.5,127.0.0.1,localhost"
+  service:
+    type: NodePort
+    ports:
+      - name: rtsp
+        port: 8554
+        targetPort: 8554
+        nodePort: 31554
+        protocol: TCP
+      - name: hls
+        port: 18888
+        targetPort: 18888
+        nodePort: 31888
+        protocol: TCP
+      - name: webrtc
+        port: 8889
+        targetPort: 8889
+        nodePort: 31889
+        protocol: TCP
+      - name: webrtc-udp
+        port: 8189
+        targetPort: 8189
+        nodePort: 31189
+        protocol: UDP
+      - name: playback
+        port: 9996
+        targetPort: 9996
+        nodePort: 31996
+        protocol: TCP
+      - name: api
+        port: 9997
+        targetPort: 9997
+        nodePort: 31997
+        protocol: TCP
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi

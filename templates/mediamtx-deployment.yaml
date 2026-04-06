@@ -1,0 +1,85 @@
+{{- if .Values.mediamtx.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "alquimia-slight.mediamtx.fullname" . }}
+  namespace: {{ include "alquimia-slight.mediamtx.namespace" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mediamtx
+    app: {{ include "alquimia-slight.mediamtx.fullname" . }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: {{ .Values.mediamtx.replicaCount }}
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: {{ include "alquimia-slight.mediamtx.fullname" . }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: {{ include "alquimia-slight.mediamtx.fullname" . }}
+        app.kubernetes.io/component: mediamtx
+    spec:
+      dnsPolicy: {{ .Values.mediamtx.dnsPolicy }}
+      hostNetwork: {{ .Values.mediamtx.hostNetwork }}
+      imagePullSecrets:
+{{- range .Values.global.imagePullSecrets }}
+        - name: {{ . }}
+{{- end }}
+      containers:
+        - name: mediamtx
+          image: "{{ .Values.mediamtx.image.repository }}:{{ .Values.mediamtx.image.tag }}"
+          imagePullPolicy: {{ .Values.mediamtx.image.pullPolicy }}
+          env:
+            - name: MTX_AUTHHTTPADDRESS
+              value: {{ include "alquimia-slight.mediamtx.authHttpAddress" . | quote }}
+{{- range $k, $v := .Values.mediamtx.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+{{- end }}
+          ports:
+            - containerPort: 8554
+              name: rtsp
+              protocol: TCP
+            - containerPort: 18888
+              name: hls
+              protocol: TCP
+            - containerPort: 8889
+              name: webrtc
+              protocol: TCP
+            - containerPort: 8189
+              name: webrtc-udp
+              protocol: UDP
+            - containerPort: 9996
+              name: playback
+              protocol: TCP
+            - containerPort: 9997
+              name: api
+              protocol: TCP
+          resources:
+{{ toYaml .Values.mediamtx.resources | indent 12 }}
+          volumeMounts:
+            - mountPath: /recordings
+              name: recordings
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: recordings
+{{- if .Values.mediamtx.persistence.enabled }}
+{{- if .Values.mediamtx.persistence.existingClaim }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.mediamtx.persistence.existingClaim }}
+{{- else }}
+          persistentVolumeClaim:
+            claimName: {{ include "alquimia-slight.mediamtx.fullname" . }}-recordings
+{{- end }}
+{{- else }}
+          emptyDir: {}
+{{- end }}
+{{- end }}
