@@ -64,10 +64,28 @@ bff:
     port: "8000"
     authDisabled: "true"
     storageBucket: "argos-evidence"
+    natsUrl: ""
+    engineBaseUrl: ""
+    accessTokenTtlMinutes: ""
+    refreshTokenTtlDays: ""
+    mediaGateway:
+      apiBaseUrl: ""
+      engineRtspBaseUrl: ""
+      publicWebrtcBaseUrl: ""
+    virtualCameras:
+      enabled: "true"
+      storageBucket: "argos-virtual-cameras"
+      storagePrefix: ""
+      rtspBaseUrl: ""
+      frameInterval: "1.0"
+      profileName: "Oficina"
+      cacheDir: "/tmp/argos-virtual-cameras"
   secret:
     jwtSecret: "change-me"
     bootstrapAdminUsername: "adminBff"
     bootstrapAdminPassword: "change-me"
+    mediamtxInternalReaderToken: "change-me"
+    virtualCameraPublishToken: ""
   resources:
     requests:
       cpu: 100m

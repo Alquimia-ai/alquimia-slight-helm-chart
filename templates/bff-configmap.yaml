@@ -7,11 +7,28 @@ metadata:
     {{- include "alquimia-slight.labels" . | nindent 4 }}
     app.kubernetes.io/component: bff
 data:
-  ARGOS_BFF_NATS_URL: "nats://{{ .Release.Name }}-nats:4222"
-  ARGOS_BFF_ENGINE_BASE_URL: "http://{{ include "alquimia-slight.engine.fullname" . }}:{{ .Values.engine.service.port }}"
-  ARGOS_BFF_STORAGE_ENDPOINT: "http://{{ include "alquimia-slight.minio.fullname" . }}:{{ .Values.minio.service.apiPort }}"
+  ARGOS_BFF_NATS_URL: {{ default (printf "nats://%s-nats:4222" .Release.Name) .Values.bff.config.natsUrl | quote }}
+  ARGOS_BFF_ENGINE_BASE_URL: {{ default (printf "http://%s:%v" (include "alquimia-slight.engine.fullname" .) .Values.engine.service.port) .Values.bff.config.engineBaseUrl | quote }}
+  ARGOS_BFF_STORAGE_ENDPOINT: {{ printf "http://%s:%v" (include "alquimia-slight.minio.fullname" .) .Values.minio.service.apiPort | quote }}
   ARGOS_BFF_STORAGE_BUCKET: {{ .Values.bff.config.storageBucket | quote }}
   ARGOS_BFF_HOST: {{ .Values.bff.config.host | quote }}
   ARGOS_BFF_PORT: {{ .Values.bff.config.port | quote }}
   ARGOS_BFF_AUTH_DISABLED: {{ .Values.bff.config.authDisabled | quote }}
+  ARGOS_BFF_MEDIA_GATEWAY_API_BASE_URL: {{ .Values.bff.config.mediaGateway.apiBaseUrl | quote }}
+  ARGOS_BFF_MEDIA_GATEWAY_ENGINE_RTSP_BASE_URL: {{ .Values.bff.config.mediaGateway.engineRtspBaseUrl | quote }}
+  ARGOS_BFF_MEDIA_GATEWAY_PUBLIC_WEBRTC_BASE_URL: {{ .Values.bff.config.mediaGateway.publicWebrtcBaseUrl | quote }}
+  ARGOS_VIRTUAL_CAMERAS_ENABLED: {{ .Values.bff.config.virtualCameras.enabled | quote }}
+  ARGOS_VIRTUAL_CAMERA_STORAGE_ENDPOINT: {{ printf "http://%s:%v" (include "alquimia-slight.minio.fullname" .) .Values.minio.service.apiPort | quote }}
+  ARGOS_VIRTUAL_CAMERA_STORAGE_BUCKET: {{ .Values.bff.config.virtualCameras.storageBucket | quote }}
+  ARGOS_VIRTUAL_CAMERA_STORAGE_PREFIX: {{ .Values.bff.config.virtualCameras.storagePrefix | quote }}
+  ARGOS_VIRTUAL_CAMERA_RTSP_BASE_URL: {{ .Values.bff.config.virtualCameras.rtspBaseUrl | quote }}
+  ARGOS_VIRTUAL_CAMERA_FRAME_INTERVAL: {{ .Values.bff.config.virtualCameras.frameInterval | quote }}
+  ARGOS_VIRTUAL_CAMERA_PROFILE_NAME: {{ .Values.bff.config.virtualCameras.profileName | quote }}
+  ARGOS_VIRTUAL_CAMERA_CACHE_DIR: {{ .Values.bff.config.virtualCameras.cacheDir | quote }}
+{{- if .Values.bff.config.accessTokenTtlMinutes }}
+  ARGOS_BFF_ACCESS_TOKEN_TTL_MINUTES: {{ .Values.bff.config.accessTokenTtlMinutes | quote }}
+{{- end }}
+{{- if .Values.bff.config.refreshTokenTtlDays }}
+  ARGOS_BFF_REFRESH_TOKEN_TTL_DAYS: {{ .Values.bff.config.refreshTokenTtlDays | quote }}
+{{- end }}
 {{- end }}
