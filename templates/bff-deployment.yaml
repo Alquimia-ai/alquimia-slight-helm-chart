@@ -22,6 +22,18 @@ spec:
 {{- range .Values.global.imagePullSecrets }}
         - name: {{ . }}
 {{- end }}
+{{- if .Values.postgres.enabled }}
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z {{ include "alquimia-slight.postgres.fullname" . }} {{ .Values.postgres.service.port }}; do
+                echo "waiting for postgres"; sleep 2;
+              done
+{{- end }}
       containers:
         - name: bff
           image: "{{ .Values.bff.image.repository }}:{{ .Values.bff.image.tag }}"
@@ -34,6 +46,12 @@ spec:
                 name: {{ include "alquimia-slight.bff.fullname" . }}-config
             - secretRef:
                 name: {{ include "alquimia-slight.bff.fullname" . }}-secret
+          env:
+            - name: ARGOS_BFF_DB_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alquimia-slight.bff.fullname" . }}-secret
+                  key: ARGOS_BFF_DB_URL
           readinessProbe:
             httpGet:
               path: /health
