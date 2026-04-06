@@ -33,7 +33,6 @@ engine:
     frameBatchSize: "1"
     storiesBufferSize: "5"
     storiesBatchSize: "2"
-    camerasConfig: "[{}]"
   resources:
     requests:
       cpu: 100m

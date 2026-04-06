@@ -16,5 +16,4 @@ data:
   ARGOS_BUFFER_FRAME_BATCH_SIZE: {{ .Values.engine.config.frameBatchSize | quote }}
   ARGOS_BUFFER_STORIES_BUFFER_SIZE: {{ .Values.engine.config.storiesBufferSize | quote }}
   ARGOS_BUFFER_STORIES_BATCH_SIZE: {{ .Values.engine.config.storiesBatchSize | quote }}
-  ARGOS_CAMERAS_CONFIG: {{ .Values.engine.config.camerasConfig | quote }}
 {{- end }}
