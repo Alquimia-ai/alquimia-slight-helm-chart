@@ -126,7 +126,8 @@ The VLM component provides:
 The Web component provides:
 
 - Frontend container (`argos-web`)
-- Environment-driven configuration via ConfigMap (`VITE_*`, MediaMTX-related hints for the UI)
+- Configuration via ConfigMap keys exposed as **container environment variables** (`envFrom` on the Deployment): `VITE_*` and MediaMTX-related hints for the runtime.
+- Optional **`web.externalHost`**: when set and the matching `web.config` fields are empty, the chart fills `VITE_BFF_URL` and WebRTC-related values from the public host plus BFF/web `NodePort` values (Helm-rendered ConfigMap only).
 - Service type `ClusterIP` (internal only) or `NodePort` (optional fixed `nodePort`)
 
 ### MediaMTX
@@ -265,7 +266,7 @@ If the BFF runs in a different namespace than the Helm release, set `mediamtx.au
 
 ### Ubuntu (VLM off)
 
-Use `values-ubuntu.yaml` for an Ubuntu-oriented deployment **without** the VLM workload (`vlm.enabled: false`). It sets `product.os` and pins PostgreSQL/MinIO persistence to Longhorn, same style as `values-rhel10-ai.yaml` but without GPU/model settings.
+Use `values-ubuntu.yaml` for an Ubuntu-oriented deployment **without** the VLM workload (`vlm.enabled: false`). It sets `product.os` and pins PostgreSQL/MinIO persistence to Longhorn, same style as `values-rhel10-ai.yaml` but without GPU/model settings. It also documents **`web.externalHost`**: set this manually to the IP or hostname clients use in the browser (Helm cannot infer it), or leave it empty and set `web.config` URLs explicitly.
 
 ```yaml
 # See values-ubuntu.yaml — key override:

@@ -56,6 +56,54 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s-web" (include "alquimia-slight.fullname" .) -}}
 {{- end -}}
 
+{{- define "alquimia-slight.web.publicPort" -}}
+{{- if and (eq .Values.web.service.type "NodePort") .Values.web.service.nodePort -}}
+{{- .Values.web.service.nodePort -}}
+{{- else -}}
+{{- .Values.web.service.port -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.bff.publicPort" -}}
+{{- if and (eq .Values.bff.service.type "NodePort") .Values.bff.service.nodePort -}}
+{{- .Values.bff.service.nodePort -}}
+{{- else -}}
+{{- .Values.bff.service.port -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.web.viteBffUrl" -}}
+{{- if .Values.web.config.viteBffUrl -}}
+{{- .Values.web.config.viteBffUrl -}}
+{{- else if .Values.web.externalHost -}}
+{{- printf "http://%s:%v" .Values.web.externalHost (include "alquimia-slight.bff.publicPort" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.web.mediamtxPublicHost" -}}
+{{- if .Values.web.config.mediamtxPublicHost -}}
+{{- .Values.web.config.mediamtxPublicHost -}}
+{{- else if .Values.web.externalHost -}}
+{{- .Values.web.externalHost -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.web.mediamtxWebrtcAllowOrigins" -}}
+{{- if .Values.web.config.mediamtxWebrtcAllowOrigins -}}
+{{- .Values.web.config.mediamtxWebrtcAllowOrigins -}}
+{{- else if .Values.web.externalHost -}}
+{{- printf "http://%s:%v" .Values.web.externalHost (include "alquimia-slight.web.publicPort" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.web.mediamtxWebrtcAdditionalHosts" -}}
+{{- if .Values.web.config.mediamtxWebrtcAdditionalHosts -}}
+{{- .Values.web.config.mediamtxWebrtcAdditionalHosts -}}
+{{- else if .Values.web.externalHost -}}
+{{- .Values.web.externalHost -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "alquimia-slight.mediamtx.fullname" -}}
 {{- printf "%s-mediamtx" (include "alquimia-slight.fullname" .) -}}
 {{- end -}}

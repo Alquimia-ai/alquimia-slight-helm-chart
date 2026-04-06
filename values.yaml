@@ -209,6 +209,7 @@ web:
     port: 8080
     targetPort: 80
     nodePort: 31000
+  externalHost: ""
   config:
     viteAppTimeZone: "America/Argentina/Buenos_Aires"
     viteBffUrl: ""

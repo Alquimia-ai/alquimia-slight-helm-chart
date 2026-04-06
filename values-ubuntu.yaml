@@ -20,3 +20,10 @@ minio:
     enabled: true
     size: 20Gi
     storageClass: longhorn
+
+# No se puede inferir en Helm: debe ser la IP o el hostname con el que los clientes abren la UI
+# (nodo, VIP, DNS). Con esto relleno, si web.config.viteBffUrl y los campos MediaMTX van vacíos,
+# el chart arma VITE_BFF_URL y orígenes WebRTC con los NodePort de bff/web del chart.
+# Alternativa: dejar externalHost vacío y definir todo en web.config (viteBffUrl, mediamtx*, etc.).
+web:
+  externalHost: ""

@@ -8,8 +8,8 @@ metadata:
     app.kubernetes.io/component: web
 data:
   VITE_APP_TIME_ZONE: {{ .Values.web.config.viteAppTimeZone | quote }}
-  VITE_BFF_URL: {{ .Values.web.config.viteBffUrl | quote }}
-  MEDIAMTX_PUBLIC_HOST: {{ .Values.web.config.mediamtxPublicHost | quote }}
-  MEDIAMTX_WEBRTC_ALLOW_ORIGINS: {{ .Values.web.config.mediamtxWebrtcAllowOrigins | quote }}
-  MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS: {{ .Values.web.config.mediamtxWebrtcAdditionalHosts | quote }}
+  VITE_BFF_URL: {{ include "alquimia-slight.web.viteBffUrl" . | quote }}
+  MEDIAMTX_PUBLIC_HOST: {{ include "alquimia-slight.web.mediamtxPublicHost" . | quote }}
+  MEDIAMTX_WEBRTC_ALLOW_ORIGINS: {{ include "alquimia-slight.web.mediamtxWebrtcAllowOrigins" . | quote }}
+  MEDIAMTX_WEBRTC_ADDITIONAL_HOSTS: {{ include "alquimia-slight.web.mediamtxWebrtcAdditionalHosts" . | quote }}
 {{- end }}
