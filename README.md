@@ -4,9 +4,9 @@ Helm chart scaffold and installation guide for **Alquimia Slight**, a product th
 
 ## Overview
 
-Alquimia Slight is designed to be deployed on **appliances / edge nodes** and, in this first version, targets **RHEL 10 AI** environments.
+Alquimia Slight is designed to be deployed on **appliances / edge nodes**. Typical targets are **RHEL 10 AI** or **Ubuntu LTS**; use the bundled values files to match the OS profile and optional VLM.
 
-The solution is composed of three main functional blocks:
+The solution is composed of these main functional blocks:
 
 - **Engine**
   - Application container
@@ -15,6 +15,13 @@ The solution is composed of three main functional blocks:
   - Application container
   - PostgreSQL database
   - MinIO instance
+- **Web**
+  - Frontend (Vite) served as static assets
+  - Configurable service exposure (`ClusterIP` or `NodePort`)
+- **MediaMTX**
+  - RTSP / HLS / WebRTC streaming and recording
+  - Optional dedicated namespace (default `media`)
+  - HTTP authentication delegated to the BFF
 - **VLM**
   - Vision-language model served with GPU support
 
@@ -22,11 +29,11 @@ The solution is composed of three main functional blocks:
 
 This first version is intended for:
 
-- **RHEL 10 AI**
+- **RHEL 10 AI** (see `values-rhel10-ai.yaml`) or **Ubuntu LTS** (see `values-ubuntu.yaml`, VLM disabled)
 - **k3s**
 - **Longhorn**
 - Appliance or node-based deployments
-- Optional NVIDIA GPU support for the VLM component
+- Optional NVIDIA GPU support for the VLM component (not used in the Ubuntu profile)
 
 ## Prerequisites
 
@@ -98,6 +105,24 @@ The VLM component provides:
 - GPU runtime support
 - Local model mount through `hostPath`
 - Offline model usage for appliance scenarios
+
+### Web
+
+The Web component provides:
+
+- Frontend container (`argos-web`)
+- Environment-driven configuration via ConfigMap (`VITE_*`, MediaMTX-related hints for the UI)
+- Service type `ClusterIP` (internal only) or `NodePort` (optional fixed `nodePort`)
+
+### MediaMTX
+
+The MediaMTX component provides:
+
+- MediaMTX container with recording under `/recordings` (PVC or `emptyDir` when persistence is disabled)
+- Optional `Namespace` resource (`mediamtx.createNamespace`) and configurable target namespace (`mediamtx.namespace`, default `media`)
+- `hostNetwork` and `dnsPolicy: ClusterFirstWithHostNet` suitable for appliance / edge setups
+- `MTX_AUTHHTTPADDRESS` built automatically to reach the BFF at `/internal/media/auth`, unless overridden with `mediamtx.auth.httpAddress`
+- Multi-port `Service` (`NodePort` by default; `nodePort` values are omitted when `service.type` is not `NodePort`)
 
 ## Example values
 
@@ -180,6 +205,59 @@ vlm:
     path: /models/qwen3-vl-8b
 ```
 
+### Web
+
+```yaml
+web:
+  enabled: true
+  image:
+    repository: alquimiaai/argos-web
+    tag: web-v0.6.1-beta.0
+  service:
+    type: NodePort
+    port: 8080
+    targetPort: 80
+    nodePort: 31000
+  config:
+    viteAppTimeZone: "America/Argentina/Buenos_Aires"
+    viteBffUrl: "http://<bff-host-or-ip>:<bff-nodeport>"
+```
+
+Use `service.type: ClusterIP` and omit `nodePort` when the UI is only reached via Ingress, port-forward, or in-cluster clients.
+
+### MediaMTX
+
+```yaml
+mediamtx:
+  enabled: true
+  createNamespace: true
+  namespace: media
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: longhorn
+  auth:
+    httpAddress: ""
+    bffNamespace: ""
+    path: /internal/media/auth
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  service:
+    type: NodePort
+```
+
+If the BFF runs in a different namespace than the Helm release, set `mediamtx.auth.bffNamespace` to that namespace. If the in-cluster BFF Service name does not match `<release>-bff`, set `mediamtx.auth.httpAddress` to the full URL (for example `http://argos-bff.bff.svc.cluster.local:8000/internal/media/auth`).
+
+### Ubuntu (VLM off)
+
+Use `values-ubuntu.yaml` for an Ubuntu-oriented deployment **without** the VLM workload (`vlm.enabled: false`). It sets `product.os` and pins PostgreSQL/MinIO persistence to Longhorn, same style as `values-rhel10-ai.yaml` but without GPU/model settings.
+
+```yaml
+# See values-ubuntu.yaml — key override:
+vlm:
+  enabled: false
+```
+
 ## Installation
 
 ### 1. Update chart dependencies
@@ -196,17 +274,36 @@ helm lint ./alquimia-slight
 
 ### 3. Render manifests
 
+RHEL / VLM on:
+
 ```bash
 helm template alquimia-slight ./alquimia-slight -f ./alquimia-slight/values-rhel10-ai.yaml
 ```
 
+Ubuntu / VLM off:
+
+```bash
+helm template alquimia-slight ./alquimia-slight -f ./alquimia-slight/values-ubuntu.yaml
+```
+
 ### 4. Install or upgrade
+
+RHEL / VLM on:
 
 ```bash
 helm upgrade --install alquimia-slight ./alquimia-slight \
   -n alquimia-slight \
   --create-namespace \
   -f ./alquimia-slight/values-rhel10-ai.yaml
+```
+
+Ubuntu / VLM off:
+
+```bash
+helm upgrade --install alquimia-slight ./alquimia-slight \
+  -n alquimia-slight \
+  --create-namespace \
+  -f ./alquimia-slight/values-ubuntu.yaml
 ```
 
 ## Operational notes
@@ -229,10 +326,15 @@ The following components should use persistent storage:
 
 - PostgreSQL
 - MinIO
+- MediaMTX (recordings PVC), when `mediamtx.persistence.enabled` is true
 
 ### Internal services
 
-By default, services should remain internal as `ClusterIP` unless there is a specific need to expose them externally.
+By default, backend services (Engine, BFF, PostgreSQL, MinIO, VLM) use `ClusterIP`. The **Web** and **MediaMTX** components can use `NodePort` when you need stable ports on the node; align `web.config` and MediaMTX WebRTC-related env vars with the URLs and ports you publish.
+
+### Namespaces
+
+Most chart resources are installed in the **Helm release namespace** (`helm upgrade --install ... -n <ns>`). **MediaMTX** can optionally deploy into a separate namespace (`mediamtx.namespace`, default `media`) and create that namespace when `mediamtx.createNamespace` is true. The BFF URL used for MediaMTX authentication still defaults to `<release>-bff.<release-namespace>.svc.cluster.local` unless you override `mediamtx.auth.*`.
 
 ## Recommended future improvements
 
@@ -250,10 +352,11 @@ As the product evolves, consider adding:
 
 Alquimia Slight is a Helm-packaged appliance-oriented deployment for Alquimia Vision, designed for:
 
-- **RHEL 10 AI**
+- **RHEL 10 AI** or **Ubuntu LTS** (profile without VLM via `values-ubuntu.yaml`)
 - **k3s**
 - **Longhorn**
-- optional **NVIDIA GPU**
+- optional **NVIDIA GPU** (VLM; omitted on the Ubuntu profile)
+- **Web** UI and **MediaMTX** streaming where required
 - edge / appliance execution model
 
 This structure provides a solid first version that is easy to install, operate, and evolve.
