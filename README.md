@@ -345,7 +345,7 @@ The following components should use persistent storage:
 
 ### Internal services
 
-By default, backend services (Engine, BFF, PostgreSQL, MinIO, VLM) use `ClusterIP`. The **Web** and **MediaMTX** components can use `NodePort` when you need stable ports on the node; align `web.config` and MediaMTX WebRTC-related env vars with the URLs and ports you publish.
+**BFF** and **MinIO** default to `NodePort` so browser clients can reach the API and S3-compatible endpoints from outside the cluster; tune `bff.service.nodePort` and `minio.service.nodePortApi` / `nodePortConsole` in `values.yaml`. Other backends (Engine, PostgreSQL, VLM) stay `ClusterIP`. The **Web** and **MediaMTX** components also support `NodePort`; align `web.config` (`viteBffUrl`, etc.) and MediaMTX WebRTC env vars with the URLs and ports you publish.
 
 ### Namespaces
 

@@ -7,14 +7,20 @@ metadata:
     {{- include "alquimia-slight.labels" . | nindent 4 }}
     app.kubernetes.io/component: minio
 spec:
-  type: ClusterIP
+  type: {{ .Values.minio.service.type }}
   selector:
     app: {{ include "alquimia-slight.minio.fullname" . }}
   ports:
     - name: api
       port: {{ .Values.minio.service.apiPort }}
       targetPort: api
+{{- if and (eq .Values.minio.service.type "NodePort") .Values.minio.service.nodePortApi }}
+      nodePort: {{ .Values.minio.service.nodePortApi }}
+{{- end }}
     - name: console
       port: {{ .Values.minio.service.consolePort }}
       targetPort: console
+{{- if and (eq .Values.minio.service.type "NodePort") .Values.minio.service.nodePortConsole }}
+      nodePort: {{ .Values.minio.service.nodePortConsole }}
+{{- end }}
 {{- end }}

@@ -57,8 +57,9 @@ bff:
     tag: bff-v0.14.0-beta.0
     pullPolicy: IfNotPresent
   service:
-    type: ClusterIP
+    type: NodePort
     port: 8000
+    nodePort: 32000
   config:
     host: "0.0.0.0"
     port: "8000"
@@ -131,8 +132,11 @@ minio:
     size: 20Gi
     storageClass: ""
   service:
+    type: NodePort
     apiPort: 9000
     consolePort: 9001
+    nodePortApi: 30900
+    nodePortConsole: 30901
   resources:
     requests:
       cpu: "250m"
