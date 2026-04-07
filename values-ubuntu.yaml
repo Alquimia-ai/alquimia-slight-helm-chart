@@ -31,3 +31,9 @@ web:
     mediamtxPublicHost: ""
     mediamtxWebrtcAllowOrigins: ""
     mediamtxWebrtcAdditionalHosts: ""
+
+# Overrides de WebRTC en MediaMTX (MTX_WEBRTCALLOWORIGINS / MTX_WEBRTCADDITIONALHOSTS)
+mediamtx:
+  webrtc:
+    allowOrigins: "*"
+    additionalHosts: "*"

@@ -1,0 +1,32 @@
+{{- if .Values.mediamtx.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "alquimia-slight.mediamtx.fullname" . }}-config
+  namespace: {{ include "alquimia-slight.mediamtx.namespace" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mediamtx
+data:
+  MTX_AUTHHTTPADDRESS: {{ include "alquimia-slight.mediamtx.authHttpAddress" . | quote }}
+  MTX_API: "yes"
+  MTX_METRICS: "yes"
+  MTX_PLAYBACK: "yes"
+  MTX_HLSADDRESS: ":18888"
+  MTX_LOGLEVEL: info
+  MTX_LOGSTRUCTURED: "yes"
+  MTX_RTSPTRANSPORTS: tcp
+  MTX_AUTHMETHOD: http
+  MTX_PLAYBACKADDRESS: ":9996"
+  MTX_PATHDEFAULTS_RECORD: "yes"
+  MTX_PATHDEFAULTS_RECORDPATH: /recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+  MTX_PATHDEFAULTS_RECORDFORMAT: fmp4
+  MTX_PATHDEFAULTS_RECORDPARTDURATION: 1s
+  MTX_PATHDEFAULTS_RECORDSEGMENTDURATION: 30s
+  MTX_PATHDEFAULTS_RECORDDELETEAFTER: 30m
+  MTX_WEBRTCALLOWORIGINS: {{ .Values.mediamtx.webrtc.allowOrigins | quote }}
+  MTX_WEBRTCADDITIONALHOSTS: {{ .Values.mediamtx.webrtc.additionalHosts | quote }}
+{{- range $k, $v := .Values.mediamtx.extraEnv }}
+  {{ $k }}: {{ $v | quote }}
+{{- end }}
+{{- end }}

@@ -32,13 +32,9 @@ spec:
         - name: mediamtx
           image: "{{ .Values.mediamtx.image.repository }}:{{ .Values.mediamtx.image.tag }}"
           imagePullPolicy: {{ .Values.mediamtx.image.pullPolicy }}
-          env:
-            - name: MTX_AUTHHTTPADDRESS
-              value: {{ include "alquimia-slight.mediamtx.authHttpAddress" . | quote }}
-{{- range $k, $v := .Values.mediamtx.env }}
-            - name: {{ $k }}
-              value: {{ $v | quote }}
-{{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "alquimia-slight.mediamtx.fullname" . }}-config
           ports:
             - containerPort: 8554
               name: rtsp
