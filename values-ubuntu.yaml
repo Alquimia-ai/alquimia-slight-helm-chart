@@ -27,3 +27,7 @@ minio:
 # Alternativa: dejar externalHost vacío y definir todo en web.config (viteBffUrl, mediamtx*, etc.).
 web:
   externalHost: ""
+  config:
+    mediamtxPublicHost: ""
+    mediamtxWebrtcAllowOrigins: ""
+    mediamtxWebrtcAdditionalHosts: ""
