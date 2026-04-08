@@ -322,6 +322,24 @@ helm upgrade --install alquimia-slight ./alquimia-slight \
   -f ./alquimia-slight/values-ubuntu.yaml
 ```
 
+## Artifact Hub publication
+
+This repository includes a GitHub Actions workflow (`.github/workflows/publish-chart.yml`) that automatically:
+
+- packages the Helm chart
+- uploads chart archives to GitHub Releases
+- updates `index.yaml` on the `gh-pages` branch
+
+One-time setup:
+
+1. In GitHub, enable **Pages** from branch `gh-pages` (root).
+2. In Artifact Hub, add this Helm repository URL:
+   `https://<github-user-or-org>.github.io/Alquimia-LiveSlight-Helm-Chart`
+3. Artifact Hub gives you a repository ID. Replace
+   `repositoryID` in `artifacthub-repo.yml` and commit.
+
+After that, every push to `main` that changes chart files will republish automatically.
+
 ## Operational notes
 
 ### NVIDIA device plugin

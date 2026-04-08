@@ -1,0 +1,6 @@
+# One-time setup:
+# 1) Add this chart repository URL in Artifact Hub:
+#    https://<github-user-or-org>.github.io/Alquimia-LiveSlight-Helm-Chart
+# 2) Artifact Hub will provide a repository ID.
+# 3) Replace <REPOSITORY_ID_FROM_ARTIFACT_HUB> below and commit.
+repositoryID: <REPOSITORY_ID_FROM_ARTIFACT_HUB>
