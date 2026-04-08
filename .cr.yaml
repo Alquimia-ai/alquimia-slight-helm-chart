@@ -1,0 +1,5 @@
+owner: Alquimia-ai
+git-repo: alquimia-slight-helm-chart
+charts-dir: charts
+pages-branch: gh-pages
+release-name-template: "{{ .Name }}-{{ .Version }}"

@@ -279,13 +279,13 @@ vlm:
 ### 1. Update chart dependencies
 
 ```bash
-helm dependency update ./alquimia-slight
+helm dependency update ./charts/alquimia-slight
 ```
 
 ### 2. Validate the chart
 
 ```bash
-helm lint ./alquimia-slight
+helm lint ./charts/alquimia-slight
 ```
 
 ### 3. Render manifests
@@ -293,13 +293,13 @@ helm lint ./alquimia-slight
 RHEL / VLM on:
 
 ```bash
-helm template alquimia-slight ./alquimia-slight -f ./alquimia-slight/values-rhel10-ai.yaml
+helm template alquimia-slight ./charts/alquimia-slight -f ./charts/alquimia-slight/values-rhel10-ai.yaml
 ```
 
 Ubuntu / VLM off:
 
 ```bash
-helm template alquimia-slight ./alquimia-slight -f ./alquimia-slight/values-ubuntu.yaml
+helm template alquimia-slight ./charts/alquimia-slight -f ./charts/alquimia-slight/values-ubuntu.yaml
 ```
 
 ### 4. Install or upgrade
@@ -307,24 +307,24 @@ helm template alquimia-slight ./alquimia-slight -f ./alquimia-slight/values-ubun
 RHEL / VLM on:
 
 ```bash
-helm upgrade --install alquimia-slight ./alquimia-slight \
+helm upgrade --install alquimia-slight ./charts/alquimia-slight \
   -n alquimia-slight \
   --create-namespace \
-  -f ./alquimia-slight/values-rhel10-ai.yaml
+  -f ./charts/alquimia-slight/values-rhel10-ai.yaml
 ```
 
 Ubuntu / VLM off:
 
 ```bash
-helm upgrade --install alquimia-slight ./alquimia-slight \
+helm upgrade --install alquimia-slight ./charts/alquimia-slight \
   -n alquimia-slight \
   --create-namespace \
-  -f ./alquimia-slight/values-ubuntu.yaml
+  -f ./charts/alquimia-slight/values-ubuntu.yaml
 ```
 
 ## Artifact Hub publication
 
-This repository includes a GitHub Actions workflow (`.github/workflows/publish-chart.yml`) that automatically:
+This repository includes a GitHub Actions workflow (`.github/workflows/release-chart.yml`) that automatically:
 
 - packages the Helm chart
 - uploads chart archives to GitHub Releases
@@ -334,7 +334,7 @@ One-time setup:
 
 1. In GitHub, enable **Pages** from branch `gh-pages` (root).
 2. In Artifact Hub, add this Helm repository URL:
-   `https://<github-user-or-org>.github.io/Alquimia-LiveSlight-Helm-Chart`
+   `https://<github-user-or-org>.github.io/alquimia-slight-helm-chart`
 3. Artifact Hub gives you a repository ID. Replace
    `repositoryID` in `artifacthub-repo.yml` and commit.
 
