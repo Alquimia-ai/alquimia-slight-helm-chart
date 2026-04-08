@@ -30,20 +30,9 @@ jobs:
       - name: Build chart dependencies
         run: helm dependency build .
 
-      - name: Install chart-releaser
+      - name: Release charts to GitHub Pages
         uses: helm/chart-releaser-action@v1.6.0
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Package chart
-        run: cr package . --package-path .cr-release-packages
-
-      - name: Upload chart package to GitHub Releases
-        run: cr upload --skip-existing --owner "${{ github.repository_owner }}" --git-repo "${{ github.event.repository.name }}" --package-path .cr-release-packages
-        env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-
-      - name: Update Helm repository index on gh-pages
-        run: cr index --skip-existing --owner "${{ github.repository_owner }}" --git-repo "${{ github.event.repository.name }}" --package-path .cr-release-packages --index-path . --push
+        with:
+          charts_dir: .
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
