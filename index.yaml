@@ -1,0 +1,28 @@
+apiVersion: v1
+entries:
+  alquimia-slight:
+  - apiVersion: v2
+    appVersion: 0.1.4
+    created: "2026-04-08T15:27:02.468691142Z"
+    dependencies:
+    - condition: nats.enabled
+      name: nats
+      repository: https://nats-io.github.io/k8s/helm/charts/
+      version: 1.2.8
+    description: Helm chart for Alquimia Slight, part of Alquimia Vision
+    digest: ec8751cfaceddd87cabf753a9767e15623cdea7e6c970524f0d8b3070c4b9131
+    home: https://alquimia.ai
+    keywords:
+    - alquimia
+    - vision
+    - appliance
+    - edge
+    - vlm
+    maintainers:
+    - name: Alquimia
+    name: alquimia-slight
+    type: application
+    urls:
+    - https://github.com/Alquimia-ai/alquimia-slight-helm-chart/releases/download/alquimia-slight-0.1.4/alquimia-slight-0.1.4.tgz
+    version: 0.1.4
+generated: "2026-04-08T15:27:02.468699247Z"
