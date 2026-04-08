@@ -8,8 +8,6 @@ on:
       - 'charts/**'
       - '.github/workflows/release-chart.yml'
       - '.cr.yaml'
-      - 'artifacthub-repo.yml'
-  workflow_dispatch:
 
 permissions:
   contents: write
@@ -17,35 +15,26 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
 
+      - name: Add dependency repositories
+        run: |
+          helm repo add nats https://nats-io.github.io/k8s/helm/charts/
+          helm repo update
+
       - name: Build chart dependencies
-        run: helm dependency build ./charts/alquimia-slight
+        run: |
+          helm dependency update ./charts/alquimia-slight
 
-      - name: Install chart-releaser CLI
+      - name: Run chart releaser
         uses: helm/chart-releaser-action@v1.7.0
-        with:
-          install_only: true
-        env:
-          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Verify chart-releaser installation
-        run: cr version
-
-      - name: Package chart
-        run: cr package ./charts/alquimia-slight --package-path .cr-release-packages --config .cr.yaml
-
-      - name: Upload chart package to GitHub Releases
-        run: cr upload --skip-existing --package-path .cr-release-packages --config .cr.yaml
-        env:
-          CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update Helm repository index on gh-pages
-        run: cr index --skip-existing --package-path .cr-release-packages --index-path . --push --config .cr.yaml
         env:
           CR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
