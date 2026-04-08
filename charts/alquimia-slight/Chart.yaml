@@ -2,8 +2,8 @@ apiVersion: v2
 name: alquimia-slight
 description: Helm chart for Alquimia Slight, part of Alquimia Vision
 type: application
-version: 0.1.3
-appVersion: "0.1.3"
+version: 0.1.4
+appVersion: "0.1.4"
 
 keywords:
   - alquimia
