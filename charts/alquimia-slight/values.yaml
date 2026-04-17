@@ -43,11 +43,11 @@ engine:
       finalizeDelaySeconds: "3.25"
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 2
+      memory: 2Gi
     limits:
-      cpu: "1"
-      memory: 1Gi
+      cpu: 3
+      memory: 3Gi
 
 bff:
   enabled: true
@@ -89,11 +89,11 @@ bff:
     virtualCameraPublishToken: ""
   resources:
     requests:
-      cpu: 100m
-      memory: 256Mi
+      cpu: 2
+      memory: 3Gi
     limits:
-      cpu: "1"
-      memory: 1Gi
+      cpu: 3
+      memory: 4Gi
 
 postgres:
   enabled: true

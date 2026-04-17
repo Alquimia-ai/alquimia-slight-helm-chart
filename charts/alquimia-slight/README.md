@@ -322,23 +322,18 @@ helm upgrade --install alquimia-slight ./charts/alquimia-slight \
   -f ./charts/alquimia-slight/values-ubuntu.yaml
 ```
 
-## Artifact Hub publication
+## Use published chart repository
 
-This repository includes a GitHub Actions workflow (`.github/workflows/release-chart.yml`) that automatically:
+Public Helm repository URL:
 
-- packages the Helm chart
-- uploads chart archives to GitHub Releases
-- updates `index.yaml` on the `gh-pages` branch
+`https://alquimia-ai.github.io/alquimia-slight-helm-chart`
 
-One-time setup:
-
-1. In GitHub, enable **Pages** from branch `gh-pages` (root).
-2. In Artifact Hub, add this Helm repository URL:
-   `https://<github-user-or-org>.github.io/alquimia-slight-helm-chart`
-3. Artifact Hub gives you a repository ID. Replace
-   `repositoryID` in `artifacthub-repo.yml` and commit.
-
-After that, every push to `main` that changes chart files will republish automatically.
+```bash
+helm repo add alquimia-slight https://alquimia-ai.github.io/alquimia-slight-helm-chart
+helm repo update
+helm search repo alquimia-slight
+helm install alquimia-slight alquimia-slight/alquimia-slight -n alquimia-slight --create-namespace -f ./charts/alquimia-slight/values-ubuntu.yaml
+```
 
 ## Operational notes
 
