@@ -18,7 +18,7 @@ engine:
   replicaCount: 1
   image:
     repository: alquimiaai/argos-engine
-    tag: v0.10.3-beta.0
+    tag: v0.4.0
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
@@ -54,7 +54,7 @@ bff:
   replicaCount: 1
   image:
     repository: alquimiaai/argos-bff
-    tag: bff-v0.14.0-beta.0
+    tag: bff-v0.16.0-beta.0
     pullPolicy: IfNotPresent
   service:
     type: NodePort
@@ -202,7 +202,7 @@ web:
   replicaCount: 1
   image:
     repository: alquimiaai/argos-web
-    tag: web-v0.6.1-beta.0
+    tag: web-v0.3.0
     pullPolicy: IfNotPresent
   service:
     type: NodePort
