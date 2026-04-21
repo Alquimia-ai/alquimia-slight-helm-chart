@@ -144,6 +144,12 @@ The MediaMTX component provides:
 - `MTX_AUTHHTTPADDRESS` built automatically to reach the BFF at `/internal/media/auth`, unless overridden with `mediamtx.auth.httpAddress`
 - Multi-port `Service` (`NodePort` by default; `nodePort` values are omitted when `service.type` is not `NodePort`)
 
+### Observability (optional)
+
+Self-contained telemetry stack in its own namespace, disabled by default. Bundles an **OTel Collector** DaemonSet (also exposed as a `Service`), **kube-state-metrics** and **node-problem-detector**. When enabled, `bff`, `engine` and `web` pods are automatically wired to ship OTLP/HTTP to the internal collector (overridable to hit an external backend directly). Supports both on-premise (no auth) and cloud (Grafana Cloud or similar, via Secret) export targets.
+
+See [`docs/observability.md`](../../docs/observability.md) for the full architecture, modes and values reference.
+
 ## Example values
 
 ### Global

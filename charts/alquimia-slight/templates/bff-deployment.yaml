@@ -46,14 +46,14 @@ spec:
                 name: {{ include "alquimia-slight.bff.fullname" . }}-config
             - secretRef:
                 name: {{ include "alquimia-slight.bff.fullname" . }}-secret
-{{- if .Values.otel.enabled }}
+{{- if include "alquimia-slight.observability.apps.enabled" . }}
             - secretRef:
                 name: {{ include "alquimia-slight.otel.secretName" . }}
 {{- end }}
           env:
-{{- if .Values.otel.enabled }}
+{{- if include "alquimia-slight.observability.apps.enabled" . }}
             - name: OTEL_SERVICE_NAME
-              value: {{ .Values.otel.serviceNames.bff | quote }}
+              value: {{ .Values.observability.apps.serviceNames.bff | quote }}
 {{- end }}
             - name: ARGOS_BFF_DB_URL
               valueFrom:

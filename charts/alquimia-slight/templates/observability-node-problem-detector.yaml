@@ -1,0 +1,186 @@
+{{- if and .Values.observability.enabled .Values.observability.nodeProblemDetector.enabled }}
+{{- $npd := .Values.observability.nodeProblemDetector -}}
+{{- $ns := include "alquimia-slight.observability.namespace" . -}}
+{{- $name := include "alquimia-slight.observability.npd.fullname" . -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $name }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node-problem-detector
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node-problem-detector
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/status", "events"]
+    verbs: ["get", "list", "watch", "update", "create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ $name }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node-problem-detector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $name }}
+    namespace: {{ $ns }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $name }}-config
+  namespace: {{ $ns }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node-problem-detector
+data:
+  kernel-monitor.json: |
+    {
+      "plugin": "kmsg",
+      "pluginConfig": {},
+      "logPath": "/dev/kmsg",
+      "lookback": "5m",
+      "bufferSize": 10,
+      "source": "kernel-monitor",
+      "metricsReporting": true,
+      "conditions": [],
+      "rules": [
+        {
+          "type": "temporary",
+          "reason": "KernelOops",
+          "pattern": "BUG: unable to handle kernel"
+        },
+        {
+          "type": "temporary",
+          "reason": "OOMKilling",
+          "pattern": "Out of memory: Kill process"
+        }
+      ]
+    }
+  docker-monitor.json: |
+    {
+      "plugin": "journald",
+      "pluginConfig": {
+        "source": "container-runtime"
+      },
+      "logPath": "/var/log/journal",
+      "lookback": "5m",
+      "bufferSize": 10,
+      "source": "journald-monitor",
+      "metricsReporting": true,
+      "conditions": [],
+      "rules": [
+        {
+          "type": "temporary",
+          "reason": "ContainerRuntimeIssue",
+          "pattern": "failed|error|timeout"
+        }
+      ]
+    }
+  readonly-monitor.json: |
+    {
+      "plugin": "kmsg",
+      "logPath": "/dev/kmsg",
+      "lookback": "5m",
+      "bufferSize": 10,
+      "source": "readonly-monitor",
+      "metricsReporting": true,
+      "conditions": [
+        {
+          "type": "ReadonlyFilesystem",
+          "reason": "FilesystemIsNotReadOnly",
+          "message": "Filesystem is not read-only"
+        }
+      ],
+      "rules": [
+        {
+          "type": "permanent",
+          "condition": "ReadonlyFilesystem",
+          "reason": "FilesystemIsReadOnly",
+          "pattern": "Remounting filesystem read-only"
+        }
+      ]
+    }
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ $name }}
+  namespace: {{ $ns }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: node-problem-detector
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "alquimia-slight.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: node-problem-detector
+  template:
+    metadata:
+      labels:
+        {{- include "alquimia-slight.labels" . | nindent 8 }}
+        app.kubernetes.io/component: node-problem-detector
+    spec:
+      serviceAccountName: {{ $name }}
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - operator: Exists
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: node-problem-detector
+          image: "{{ $npd.image.repository }}:{{ $npd.image.tag }}"
+          imagePullPolicy: {{ $npd.image.pullPolicy }}
+          securityContext:
+            privileged: true
+          resources:
+            {{- toYaml $npd.resources | nindent 12 }}
+          args:
+            - --logtostderr
+            - --config.system-log-monitor=/config/kernel-monitor.json
+            - --config.system-log-monitor=/config/docker-monitor.json
+            - --config.system-log-monitor=/config/readonly-monitor.json
+          volumeMounts:
+            - name: log
+              mountPath: /var/log
+              readOnly: true
+            - name: kmsg
+              mountPath: /dev/kmsg
+              readOnly: true
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: log
+          hostPath:
+            path: /var/log
+        - name: kmsg
+          hostPath:
+            path: /dev/kmsg
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: config
+          configMap:
+            name: {{ $name }}-config
+{{- end }}

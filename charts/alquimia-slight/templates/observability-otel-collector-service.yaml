@@ -1,0 +1,33 @@
+{{- if and .Values.observability.enabled .Values.observability.otelCollector.enabled }}
+{{- $otel := .Values.observability.otelCollector -}}
+{{- $name := include "alquimia-slight.observability.otelCollector.fullname" . -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $name }}
+  namespace: {{ include "alquimia-slight.observability.namespace" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: {{ include "alquimia-slight.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: otel-collector
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+    {{- if $otel.prometheusExporter.enabled }}
+    - name: prom-metrics
+      port: {{ $otel.prometheusExporter.port }}
+      targetPort: {{ $otel.prometheusExporter.port }}
+      protocol: TCP
+    {{- end }}
+{{- end }}

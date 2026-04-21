@@ -1,0 +1,102 @@
+{{- if and .Values.observability.enabled .Values.observability.otelCollector.enabled }}
+{{- $otel := .Values.observability.otelCollector -}}
+{{- $name := include "alquimia-slight.observability.otelCollector.fullname" . -}}
+{{- $otlpConfigured := or (ne (default "" $otel.otlphttp.authHeader) "") (ne (default "" $otel.otlphttp.existingSecret) "") -}}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ $name }}
+  namespace: {{ include "alquimia-slight.observability.namespace" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "alquimia-slight.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: otel-collector
+  template:
+    metadata:
+      labels:
+        {{- include "alquimia-slight.labels" . | nindent 8 }}
+        app.kubernetes.io/component: otel-collector
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: {{ $otel.prometheusExporter.port | quote }}
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ $name }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: otel-collector
+          image: "{{ $otel.image.repository }}:{{ $otel.image.tag }}"
+          imagePullPolicy: {{ $otel.image.pullPolicy }}
+          args:
+            - --config=/conf/relay.yaml
+          env:
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          {{- if $otlpConfigured }}
+            - name: OTEL_AUTHORIZATION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "alquimia-slight.observability.otelCollector.secretName" . }}
+                  key: {{ include "alquimia-slight.observability.otelCollector.secretKey" . }}
+          {{- end }}
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+            {{- if $otel.prometheusExporter.enabled }}
+            - name: prom-metrics
+              containerPort: {{ $otel.prometheusExporter.port }}
+              protocol: TCP
+            {{- end }}
+          resources:
+            {{- toYaml $otel.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+            - name: hostfs
+              mountPath: /hostfs
+              readOnly: true
+            - name: varlibkubelet
+              mountPath: /var/lib/kubelet
+              readOnly: true
+            - name: cgroups
+              mountPath: /sys/fs/cgroup
+              readOnly: true
+            - name: proc
+              mountPath: /proc
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ $name }}-config
+            items:
+              - key: relay
+                path: relay.yaml
+        - name: hostfs
+          hostPath:
+            path: /
+        - name: varlibkubelet
+          hostPath:
+            path: /var/lib/kubelet
+        - name: cgroups
+          hostPath:
+            path: /sys/fs/cgroup
+        - name: proc
+          hostPath:
+            path: /proc
+{{- end }}

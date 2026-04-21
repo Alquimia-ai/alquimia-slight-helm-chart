@@ -1,0 +1,103 @@
+{{- if and .Values.observability.enabled .Values.observability.otelCollector.enabled }}
+{{- $otel := .Values.observability.otelCollector -}}
+{{- $otlpEnabled := ne (default "" $otel.otlphttp.endpoint) "" -}}
+{{- $otlpAuthEnabled := or (ne (default "" $otel.otlphttp.authHeader) "") (ne (default "" $otel.otlphttp.existingSecret) "") -}}
+{{- $promEnabled := $otel.prometheusExporter.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "alquimia-slight.observability.otelCollector.fullname" . }}-config
+  namespace: {{ include "alquimia-slight.observability.namespace" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: otel-collector
+data:
+  relay: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+      hostmetrics:
+        root_path: /hostfs
+        collection_interval: {{ $otel.collectionInterval }}
+        scrapers:
+          cpu:
+          load:
+          memory:
+          disk:
+          filesystem:
+          network:
+          paging:
+          processes:
+
+      kubeletstats:
+        collection_interval: {{ $otel.collectionInterval }}
+        auth_type: serviceAccount
+        endpoint: https://${env:K8S_NODE_NAME}:10250
+        insecure_skip_verify: true
+        metric_groups:
+          - node
+          - pod
+          - container
+          - volume
+
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: {{ $otel.prometheusScrape.jobName | quote }}
+              static_configs:
+                - targets:
+{{- range $otel.prometheusScrape.targets }}
+                    - {{ . | quote }}
+{{- end }}
+
+    processors:
+      memory_limiter:
+        check_interval: 5s
+        limit_mib: 256
+        spike_limit_mib: 64
+
+      batch:
+        timeout: 10s
+        send_batch_size: 1024
+
+      resource:
+        attributes:
+          - key: service.name
+            value: {{ $otel.serviceName | quote }}
+            action: upsert
+          - key: k8s.node.name
+            from_attribute: k8s.node.name
+            action: upsert
+          - key: cluster
+            value: {{ .Values.observability.cluster | quote }}
+            action: upsert
+
+    exporters:
+{{- if $promEnabled }}
+      prometheus:
+        endpoint: 0.0.0.0:{{ $otel.prometheusExporter.port }}
+{{- end }}
+{{- if $otlpEnabled }}
+      otlphttp:
+        endpoint: {{ $otel.otlphttp.endpoint | quote }}
+{{- if $otlpAuthEnabled }}
+        headers:
+          Authorization: ${env:OTEL_AUTHORIZATION}
+{{- end }}
+{{- end }}
+
+    service:
+      pipelines:
+        metrics:
+          receivers: [otlp, hostmetrics, kubeletstats, prometheus]
+          processors: [memory_limiter, batch, resource]
+          exporters: [{{- $exps := list -}}
+            {{- if $otlpEnabled }}{{- $exps = append $exps "otlphttp" }}{{- end -}}
+            {{- if $promEnabled }}{{- $exps = append $exps "prometheus" }}{{- end -}}
+            {{- join ", " $exps -}}]
+{{- end }}

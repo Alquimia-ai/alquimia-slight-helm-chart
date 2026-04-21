@@ -9,6 +9,7 @@ The stack bundles:
 - **Web** UI
 - **MediaMTX** (RTSP / HLS / WebRTC streaming and recording)
 - **VLM** — vLLM-based vision-language model serving on GPU, with an optional Helm hook Job that pulls the model from Hugging Face into a PVC on install/upgrade
+- **Observability** (optional) — OTel Collector DaemonSet, kube-state-metrics and node-problem-detector, with auto-wired app telemetry. See [`docs/observability.md`](docs/observability.md)
 
 Target platform: **RHEL 10 AI** or **Ubuntu LTS** running on **k3s** with **Longhorn** persistence and an optional **NVIDIA GPU**.
 
@@ -78,5 +79,6 @@ Releases are cut automatically from `main` via the workflow under `.github/workf
 ## Links
 
 - Chart documentation: [`charts/alquimia-slight/README.md`](charts/alquimia-slight/README.md)
+- Observability stack: [`docs/observability.md`](docs/observability.md)
 - Helm repository: https://alquimia-ai.github.io/alquimia-slight-helm-chart
 - Project home: https://alquimia.ai

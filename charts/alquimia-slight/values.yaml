@@ -14,19 +14,6 @@ serviceAccount:
   create: true
   name: ""
 
-# OpenTelemetry (OTLP to Grafana or another backend). With enabled: true the same variables are injected into bff, engine and web; only serviceNames.* differ per component.
-otel:
-  enabled: false
-  logsEnabled: "true"
-  exporterOtlpProtocol: "http/protobuf"
-  exporterOtlpEndpoint: ""
-  resourceAttributes: "deployment.environment=appliance,service.namespace=argos"
-  exporterOtlpHeaders: ""
-  serviceNames:
-    bff: argos-bff
-    engine: argos-engine
-    web: argos-web
-
 engine:
   enabled: true
   replicaCount: 1
@@ -365,3 +352,113 @@ mediamtx:
     limits:
       cpu: "1"
       memory: 1Gi
+
+# Stand-alone observability stack, deployed into its own namespace.
+# Provides:
+#   - otelCollector: DaemonSet that collects host / kubelet / prometheus metrics
+#     and (optionally) forwards them via OTLP/HTTP to a remote backend (e.g. Grafana Cloud).
+#   - kubeStateMetrics: Deployment + Service exposing K8s resource state as Prometheus metrics.
+#   - nodeProblemDetector: DaemonSet reporting node-level issues (kernel oops, OOM, read-only FS, etc.).
+# Each sub-component can be toggled independently. Everything is disabled by default.
+observability:
+  enabled: false
+  createNamespace: true
+  namespace: observability
+  # Value used for the "cluster" resource attribute in OTel metrics.
+  cluster: "alquimia-slight"
+
+  # OpenTelemetry configuration for the application pods (bff, engine, web).
+  # When observability.enabled=true this is also active by default; set
+  # apps.enabled=false to explicitly opt out without disabling the rest of the stack.
+  #
+  # Endpoint resolution (OTEL_EXPORTER_OTLP_ENDPOINT):
+  #   1. If apps.exporterOtlpEndpoint is set, it is used as-is (e.g. point apps
+  #      directly to Grafana Cloud or any external collector).
+  #   2. Otherwise, if otelCollector.enabled is true, apps auto-target the
+  #      bundled internal collector Service on port 4318 (OTLP/HTTP). The
+  #      collector then forwards to the remote backend (see otelCollector.otlphttp).
+  #   3. Otherwise the endpoint is empty and apps effectively run without OTel.
+  apps:
+    enabled: true
+    logsEnabled: "true"
+    exporterOtlpProtocol: "http/protobuf"
+    exporterOtlpEndpoint: ""
+    resourceAttributes: "deployment.environment=appliance,service.namespace=argos"
+    exporterOtlpHeaders: ""
+    serviceNames:
+      bff: argos-bff
+      engine: argos-engine
+      web: argos-web
+
+  otelCollector:
+    enabled: true
+    image:
+      repository: otel/opentelemetry-collector-contrib
+      tag: "0.123.0"
+      pullPolicy: IfNotPresent
+    collectionInterval: 30s
+    serviceName: "otel-node-monitor"
+    # Remote OTLP/HTTP backend. Leave endpoint empty to disable the remote exporter
+    # (the collector will still expose its local Prometheus endpoint).
+    #
+    # Two scenarios:
+    #   - On-premise: endpoint points to a backend on the same network, no auth
+    #     required (typical when Grafana / Tempo / Prometheus run inside the cluster
+    #     or in a trusted LAN). Leave authHeader and existingSecret empty.
+    #   - Cloud (e.g. Grafana Cloud): endpoint is public and requires an Authorization
+    #     header. Provide it via existingSecret (preferred) or inline authHeader.
+    otlphttp:
+      endpoint: ""
+      # Full value of the HTTP Authorization header (e.g. "Basic <base64>").
+      # Leave empty for on-premise setups that don't need auth.
+      authHeader: ""
+      # If set, the Authorization header is read from this pre-existing secret
+      # (key = existingSecretKey). Takes precedence over inline authHeader.
+      existingSecret: ""
+      existingSecretKey: "Authorization"
+    # Local Prometheus endpoint exposed by the collector (useful for in-cluster scraping).
+    prometheusExporter:
+      enabled: true
+      port: 9464
+    # Static Prometheus scrape targets wired into the collector pipeline.
+    prometheusScrape:
+      jobName: "k3s-supervisor"
+      targets:
+        - "127.0.0.1:6443"
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  kubeStateMetrics:
+    enabled: true
+    image:
+      repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
+      tag: "v2.17.0"
+      pullPolicy: IfNotPresent
+    service:
+      port: 8080
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+
+  nodeProblemDetector:
+    enabled: true
+    image:
+      repository: registry.k8s.io/node-problem-detector/node-problem-detector
+      tag: "v0.8.20"
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi

@@ -239,3 +239,59 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "alquimia-slight.otel.secretName" -}}
 {{- printf "%s-otel" (include "alquimia-slight.fullname" .) -}}
 {{- end -}}
+
+{{/*
+Whether OTel instrumentation for the application pods (bff/engine/web) is active.
+Active when observability.enabled AND observability.apps.enabled are both true.
+Outputs "true" (truthy) or empty (falsy) so it can be used with `if` directly.
+*/}}
+{{- define "alquimia-slight.observability.apps.enabled" -}}
+{{- if and .Values.observability.enabled .Values.observability.apps.enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/*
+OTLP endpoint that bff / engine / web ship telemetry to.
+  - If observability.apps.exporterOtlpEndpoint is set, use it verbatim
+    (explicit override; apps bypass the internal collector).
+  - Otherwise, if the bundled observability stack is enabled and the collector
+    is on, point at the internal OTel Collector Service on port 4318 (OTLP/HTTP).
+  - Otherwise empty (apps will effectively run without OTel).
+*/}}
+{{- define "alquimia-slight.otel.effectiveEndpoint" -}}
+{{- if .Values.observability.apps.exporterOtlpEndpoint -}}
+{{- .Values.observability.apps.exporterOtlpEndpoint -}}
+{{- else if and .Values.observability.enabled .Values.observability.otelCollector.enabled -}}
+{{- printf "http://%s.%s.svc.cluster.local:4318" (include "alquimia-slight.observability.otelCollector.fullname" .) (include "alquimia-slight.observability.namespace" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Observability (stand-alone stack) */}}
+{{- define "alquimia-slight.observability.namespace" -}}
+{{- default "observability" .Values.observability.namespace -}}
+{{- end -}}
+
+{{- define "alquimia-slight.observability.otelCollector.fullname" -}}
+{{- printf "%s-otel-collector" (include "alquimia-slight.fullname" .) -}}
+{{- end -}}
+
+{{- define "alquimia-slight.observability.otelCollector.secretName" -}}
+{{- if .Values.observability.otelCollector.otlphttp.existingSecret -}}
+{{- .Values.observability.otelCollector.otlphttp.existingSecret -}}
+{{- else -}}
+{{- printf "%s-auth" (include "alquimia-slight.observability.otelCollector.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.observability.otelCollector.secretKey" -}}
+{{- default "Authorization" .Values.observability.otelCollector.otlphttp.existingSecretKey -}}
+{{- end -}}
+
+{{- define "alquimia-slight.observability.ksm.fullname" -}}
+{{- printf "%s-kube-state-metrics" (include "alquimia-slight.fullname" .) -}}
+{{- end -}}
+
+{{- define "alquimia-slight.observability.npd.fullname" -}}
+{{- printf "%s-node-problem-detector" (include "alquimia-slight.fullname" .) -}}
+{{- end -}}
