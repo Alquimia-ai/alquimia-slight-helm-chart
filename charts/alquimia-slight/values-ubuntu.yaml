@@ -1,6 +1,8 @@
 # Ubuntu-oriented profile: same full stack as the default chart (GPU/vLLM included).
 global:
-  host: "192.168.77.143"
+  # Public IP/hostname of the appliance used by clients to reach the UI and media streams.
+  # Replace with the real node IP, VIP or DNS name (e.g. "10.0.0.10" or "slight.example.com").
+  host: "192.168.1.100"
 
 product:
   os: "Ubuntu 22.04 LTS"
