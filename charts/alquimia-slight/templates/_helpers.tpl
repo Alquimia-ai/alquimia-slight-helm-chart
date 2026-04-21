@@ -72,35 +72,41 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 {{- end -}}
 
+{{- define "alquimia-slight.globalHost" -}}
+{{- if .Values.global.host -}}
+{{- .Values.global.host -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "alquimia-slight.web.viteBffUrl" -}}
 {{- if .Values.web.config.viteBffUrl -}}
 {{- .Values.web.config.viteBffUrl -}}
-{{- else if .Values.web.externalHost -}}
-{{- printf "http://%s:%v" .Values.web.externalHost (include "alquimia-slight.bff.publicPort" .) -}}
+{{- else if include "alquimia-slight.globalHost" . -}}
+{{- printf "http://%s:%v" (include "alquimia-slight.globalHost" .) (include "alquimia-slight.bff.publicPort" .) -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "alquimia-slight.web.mediamtxPublicHost" -}}
 {{- if .Values.web.config.mediamtxPublicHost -}}
 {{- .Values.web.config.mediamtxPublicHost -}}
-{{- else if .Values.web.externalHost -}}
-{{- .Values.web.externalHost -}}
+{{- else if include "alquimia-slight.globalHost" . -}}
+{{- include "alquimia-slight.globalHost" . -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "alquimia-slight.web.mediamtxWebrtcAllowOrigins" -}}
 {{- if .Values.web.config.mediamtxWebrtcAllowOrigins -}}
 {{- .Values.web.config.mediamtxWebrtcAllowOrigins -}}
-{{- else if .Values.web.externalHost -}}
-{{- printf "http://%s:%v" .Values.web.externalHost (include "alquimia-slight.web.publicPort" .) -}}
+{{- else if include "alquimia-slight.globalHost" . -}}
+{{- printf "http://%s:%v" (include "alquimia-slight.globalHost" .) (include "alquimia-slight.web.publicPort" .) -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "alquimia-slight.web.mediamtxWebrtcAdditionalHosts" -}}
 {{- if .Values.web.config.mediamtxWebrtcAdditionalHosts -}}
 {{- .Values.web.config.mediamtxWebrtcAdditionalHosts -}}
-{{- else if .Values.web.externalHost -}}
-{{- .Values.web.externalHost -}}
+{{- else if include "alquimia-slight.globalHost" . -}}
+{{- include "alquimia-slight.globalHost" . -}}
 {{- end -}}
 {{- end -}}
 
@@ -117,4 +123,78 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $path := default "/internal/media/auth" .Values.mediamtx.auth.path -}}
 {{- $computed := printf "http://%s.%s.svc.cluster.local:%v%s" (include "alquimia-slight.bff.fullname" .) $ns .Values.bff.service.port $path -}}
 {{- default $computed .Values.mediamtx.auth.httpAddress -}}
+{{- end -}}
+
+{{/* Args: (list $root "api"|"rtsp"|"webrtc"|...): NodePort if Service is NodePort, else service port. */}}
+{{- define "alquimia-slight.mediamtx.publicPort" -}}
+{{- $root := index . 0 -}}
+{{- $portName := index . 1 -}}
+{{- range $root.Values.mediamtx.service.ports -}}
+{{- if eq .name $portName -}}
+{{- if and (eq $root.Values.mediamtx.service.type "NodePort") .nodePort -}}
+{{- .nodePort -}}
+{{- else -}}
+{{- .port -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.bff.mediaGatewayApiBaseUrl" -}}
+{{- if .Values.bff.config.mediaGateway.apiBaseUrl -}}
+{{- .Values.bff.config.mediaGateway.apiBaseUrl -}}
+{{- else if and (include "alquimia-slight.globalHost" .) .Values.mediamtx.enabled -}}
+{{- printf "http://%s:%v" (include "alquimia-slight.globalHost" .) (include "alquimia-slight.mediamtx.publicPort" (list . "api")) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.bff.mediaGatewayEngineRtspBaseUrl" -}}
+{{- if .Values.bff.config.mediaGateway.engineRtspBaseUrl -}}
+{{- .Values.bff.config.mediaGateway.engineRtspBaseUrl -}}
+{{- else if and (include "alquimia-slight.globalHost" .) .Values.mediamtx.enabled -}}
+{{- printf "rtsp://%s:%v" (include "alquimia-slight.globalHost" .) (include "alquimia-slight.mediamtx.publicPort" (list . "rtsp")) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.bff.mediaGatewayPublicWebrtcBaseUrl" -}}
+{{- if .Values.bff.config.mediaGateway.publicWebrtcBaseUrl -}}
+{{- .Values.bff.config.mediaGateway.publicWebrtcBaseUrl -}}
+{{- else if and (include "alquimia-slight.globalHost" .) .Values.mediamtx.enabled -}}
+{{- printf "http://%s:%v" (include "alquimia-slight.globalHost" .) (include "alquimia-slight.mediamtx.publicPort" (list . "webrtc")) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.engine.mediaGatewayPlaybackBaseUrl" -}}
+{{- if .Values.engine.config.media.playbackBaseUrl -}}
+{{- .Values.engine.config.media.playbackBaseUrl -}}
+{{- else if and (include "alquimia-slight.globalHost" .) .Values.mediamtx.enabled -}}
+{{- printf "rtsp://%s:%v" (include "alquimia-slight.globalHost" .) (include "alquimia-slight.mediamtx.publicPort" (list . "playback")) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* MediaMTX WebRTC: when allowOrigins/additionalHosts are "*" or empty and global.host is set, concrete lists are built. */}}
+{{- define "alquimia-slight.mediamtx.webrtcAllowOrigins" -}}
+{{- $v := .Values.mediamtx.webrtc.allowOrigins -}}
+{{- if and $v (ne $v "*") -}}
+{{- $v -}}
+{{- else if include "alquimia-slight.globalHost" . -}}
+{{- printf "http://%s:%v,http://127.0.0.1:5173,http://localhost:5173,http://127.0.0.1:8080,http://localhost:8080" (include "alquimia-slight.globalHost" .) (include "alquimia-slight.web.publicPort" .) -}}
+{{- else -}}
+{{- default "*" $v -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.mediamtx.webrtcAdditionalHosts" -}}
+{{- $v := .Values.mediamtx.webrtc.additionalHosts -}}
+{{- if and $v (ne $v "*") -}}
+{{- $v -}}
+{{- else if include "alquimia-slight.globalHost" . -}}
+{{- printf "%s,127.0.0.1,localhost" (include "alquimia-slight.globalHost" .) -}}
+{{- else -}}
+{{- default "*" $v -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.otel.secretName" -}}
+{{- printf "%s-otel" (include "alquimia-slight.fullname" .) -}}
 {{- end -}}

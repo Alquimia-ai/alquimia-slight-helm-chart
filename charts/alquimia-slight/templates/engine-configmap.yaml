@@ -16,7 +16,7 @@ data:
   ARGOS_BUFFER_FRAME_BATCH_SIZE: {{ .Values.engine.config.frameBatchSize | quote }}
   ARGOS_BUFFER_STORIES_BUFFER_SIZE: {{ .Values.engine.config.storiesBufferSize | quote }}
   ARGOS_BUFFER_STORIES_BATCH_SIZE: {{ .Values.engine.config.storiesBatchSize | quote }}
-  ARGOS_MEDIA_GATEWAY_PLAYBACK_BASE_URL: {{ .Values.engine.config.media.playbackBaseUrl | quote }}
+  ARGOS_MEDIA_GATEWAY_PLAYBACK_BASE_URL: {{ include "alquimia-slight.engine.mediaGatewayPlaybackBaseUrl" . | quote }}
   ARGOS_MEDIA_GATEWAY_INTERNAL_READER_TOKEN: {{ .Values.engine.config.media.internalReaderToken | quote }}
   ARGOS_STORAGE_ENDPOINT: {{ printf "http://%s:%v" (include "alquimia-slight.minio.fullname" .) .Values.minio.service.apiPort | quote }}
   ARGOS_STORAGE_BUCKET: {{ .Values.bff.config.storageBucket | quote }}

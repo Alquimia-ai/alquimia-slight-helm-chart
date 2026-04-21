@@ -1,18 +1,20 @@
 global:
-  storageClass: longhorn
+  host: "192.168.77.143"
 
 product:
   os: "RHEL 10 AI"
   targetPlatform: "appliance"
 
-vlm:
-  enabled: true
-  runtimeClassName: nvidia
-  model:
-    hostPath: /var/home/alquimia/models
-    path: /models/qwen3-vl-8b
+bff:
+  secret:
+    jwtSecret: "change-me"
+    bootstrapAdminUsername: "adminBff"
+    bootstrapAdminPassword: "change-me"
 
 postgres:
+  auth:
+    username: bffUser
+    password: change-me
   persistence:
     enabled: true
     size: 10Gi

@@ -32,6 +32,13 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "alquimia-slight.engine.fullname" . }}-config
+{{- if .Values.otel.enabled }}
+            - secretRef:
+                name: {{ include "alquimia-slight.otel.secretName" . }}
+          env:
+            - name: OTEL_SERVICE_NAME
+              value: {{ .Values.otel.serviceNames.engine | quote }}
+{{- end }}
           readinessProbe:
             httpGet:
               path: /health

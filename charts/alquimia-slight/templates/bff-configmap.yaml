@@ -14,9 +14,9 @@ data:
   ARGOS_BFF_HOST: {{ .Values.bff.config.host | quote }}
   ARGOS_BFF_PORT: {{ .Values.bff.config.port | quote }}
   ARGOS_BFF_AUTH_DISABLED: {{ .Values.bff.config.authDisabled | quote }}
-  ARGOS_BFF_MEDIA_GATEWAY_API_BASE_URL: {{ .Values.bff.config.mediaGateway.apiBaseUrl | quote }}
-  ARGOS_BFF_MEDIA_GATEWAY_ENGINE_RTSP_BASE_URL: {{ .Values.bff.config.mediaGateway.engineRtspBaseUrl | quote }}
-  ARGOS_BFF_MEDIA_GATEWAY_PUBLIC_WEBRTC_BASE_URL: {{ .Values.bff.config.mediaGateway.publicWebrtcBaseUrl | quote }}
+  ARGOS_BFF_MEDIA_GATEWAY_API_BASE_URL: {{ include "alquimia-slight.bff.mediaGatewayApiBaseUrl" . | quote }}
+  ARGOS_BFF_MEDIA_GATEWAY_ENGINE_RTSP_BASE_URL: {{ include "alquimia-slight.bff.mediaGatewayEngineRtspBaseUrl" . | quote }}
+  ARGOS_BFF_MEDIA_GATEWAY_PUBLIC_WEBRTC_BASE_URL: {{ include "alquimia-slight.bff.mediaGatewayPublicWebrtcBaseUrl" . | quote }}
   ARGOS_VIRTUAL_CAMERAS_ENABLED: {{ .Values.bff.config.virtualCameras.enabled | quote }}
   ARGOS_VIRTUAL_CAMERA_STORAGE_ENDPOINT: {{ printf "http://%s:%v" (include "alquimia-slight.minio.fullname" .) .Values.minio.service.apiPort | quote }}
   ARGOS_VIRTUAL_CAMERA_STORAGE_BUCKET: {{ .Values.bff.config.virtualCameras.storageBucket | quote }}

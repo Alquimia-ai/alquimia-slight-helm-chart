@@ -24,8 +24,8 @@ data:
   MTX_PATHDEFAULTS_RECORDPARTDURATION: 1s
   MTX_PATHDEFAULTS_RECORDSEGMENTDURATION: 30s
   MTX_PATHDEFAULTS_RECORDDELETEAFTER: 30m
-  MTX_WEBRTCALLOWORIGINS: {{ .Values.mediamtx.webrtc.allowOrigins | quote }}
-  MTX_WEBRTCADDITIONALHOSTS: {{ .Values.mediamtx.webrtc.additionalHosts | quote }}
+  MTX_WEBRTCALLOWORIGINS: {{ include "alquimia-slight.mediamtx.webrtcAllowOrigins" . | quote }}
+  MTX_WEBRTCADDITIONALHOSTS: {{ include "alquimia-slight.mediamtx.webrtcAdditionalHosts" . | quote }}
 {{- range $k, $v := .Values.mediamtx.extraEnv }}
   {{ $k }}: {{ $v | quote }}
 {{- end }}

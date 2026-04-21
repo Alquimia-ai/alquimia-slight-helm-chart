@@ -1,5 +1,6 @@
 global:
   storageClass: longhorn
+  host: ""
   imagePullSecrets:
     - regcred
 
@@ -12,6 +13,19 @@ product:
 serviceAccount:
   create: true
   name: ""
+
+# OpenTelemetry (OTLP to Grafana or another backend). With enabled: true the same variables are injected into bff, engine and web; only serviceNames.* differ per component.
+otel:
+  enabled: false
+  logsEnabled: "true"
+  exporterOtlpProtocol: "http/protobuf"
+  exporterOtlpEndpoint: ""
+  resourceAttributes: "deployment.environment=appliance,service.namespace=argos"
+  exporterOtlpHeaders: ""
+  serviceNames:
+    bff: argos-bff
+    engine: argos-engine
+    web: argos-web
 
 engine:
   enabled: true
@@ -34,6 +48,7 @@ engine:
     storiesBufferSize: "5"
     storiesBatchSize: "2"
     media:
+      # If empty and global.host is set, the chart builds rtsp://<host>:<mediamtx playback NodePort>.
       playbackBaseUrl: ""
       internalReaderToken: "change-me"
     evidence:
@@ -70,6 +85,7 @@ bff:
     accessTokenTtlMinutes: ""
     refreshTokenTtlDays: ""
     mediaGateway:
+      # If empty and global.host is set, the chart builds URLs using that host plus the mediamtx NodePorts (api/rtsp/webrtc).
       apiBaseUrl: ""
       engineRtspBaseUrl: ""
       publicWebrtcBaseUrl: ""
@@ -82,9 +98,10 @@ bff:
       profileName: "Oficina"
       cacheDir: "/tmp/argos-virtual-cameras"
   secret:
-    jwtSecret: "change-me"
-    bootstrapAdminUsername: "adminBff"
-    bootstrapAdminPassword: "change-me"
+    # Set these in the environment values file (values-ubuntu.yaml, values-rhel10-ai.yaml, etc.).
+    jwtSecret: ""
+    bootstrapAdminUsername: ""
+    bootstrapAdminPassword: ""
     mediamtxInternalReaderToken: "change-me"
     virtualCameraPublishToken: ""
   resources:
@@ -103,11 +120,12 @@ postgres:
     pullPolicy: IfNotPresent
   auth:
     database: bffdb
-    username: bffUser
-    password: change-me
+    # Set username and password in the environment values file (e.g. values-ubuntu.yaml / values-rhel10-ai.yaml).
+    username: ""
+    password: ""
   persistence:
     enabled: true
-    size: 10Gi
+    size: 100Gi
     storageClass: ""
   service:
     port: 5432
@@ -129,7 +147,7 @@ minio:
   rootPassword: "change-me"
   persistence:
     enabled: true
-    size: 20Gi
+    size: 400Gi
     storageClass: ""
   service:
     type: NodePort
@@ -209,7 +227,6 @@ web:
     port: 8080
     targetPort: 80
     nodePort: 31000
-  externalHost: ""
   config:
     viteAppTimeZone: "America/Argentina/Buenos_Aires"
     viteBffUrl: ""
@@ -243,7 +260,7 @@ mediamtx:
     pullPolicy: IfNotPresent
   persistence:
     enabled: true
-    size: 20Gi
+    size: 50Gi
     storageClass: ""
     existingClaim: ""
   auth:
@@ -253,6 +270,7 @@ mediamtx:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
   webrtc:
+    # "*" or empty: when global.host is set, the chart fills WebRTC origins/hosts automatically; any other value is used as-is.
     allowOrigins: "*"
     additionalHosts: "*"
   extraEnv: {}

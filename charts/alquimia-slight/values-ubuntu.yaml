@@ -1,39 +1,21 @@
-# Ubuntu-oriented profile: same stack as the default chart but without the VLM (vLLM) workload.
+# Ubuntu-oriented profile: same full stack as the default chart (GPU/vLLM included).
 global:
-  storageClass: longhorn
+  host: "192.168.77.143"
 
 product:
   os: "Ubuntu 22.04 LTS"
-  targetPlatform: "appliance"
 
-vlm:
-  enabled: false
+bff:
+  secret:
+    jwtSecret: "jwtSecret"
+    bootstrapAdminUsername: "bootstrapAdminUsername"
+    bootstrapAdminPassword: "bootstrapAdminPassword"
 
 postgres:
-  persistence:
-    enabled: true
-    size: 10Gi
-    storageClass: longhorn
+  auth:
+    username: rootUserPostgres
+    password: rootPasswordPostgres1234
 
 minio:
-  persistence:
-    enabled: true
-    size: 20Gi
-    storageClass: longhorn
-
-# No se puede inferir en Helm: debe ser la IP o el hostname con el que los clientes abren la UI
-# (nodo, VIP, DNS). Con esto relleno, si web.config.viteBffUrl y los campos MediaMTX van vacíos,
-# el chart arma VITE_BFF_URL y orígenes WebRTC con los NodePort de bff/web del chart.
-# Alternativa: dejar externalHost vacío y definir todo en web.config (viteBffUrl, mediamtx*, etc.).
-web:
-  externalHost: ""
-  config:
-    mediamtxPublicHost: ""
-    mediamtxWebrtcAllowOrigins: ""
-    mediamtxWebrtcAdditionalHosts: ""
-
-# Overrides de WebRTC en MediaMTX (MTX_WEBRTCALLOWORIGINS / MTX_WEBRTCADDITIONALHOSTS)
-mediamtx:
-  webrtc:
-    allowOrigins: "*"
-    additionalHosts: "*"
+  rootUser: "rootUserMinio"
+  rootPassword: "rootPasswordMinio1234"
