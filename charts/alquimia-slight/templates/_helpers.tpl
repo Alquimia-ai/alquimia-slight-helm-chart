@@ -52,6 +52,47 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "%s-vlm" (include "alquimia-slight.fullname" .) -}}
 {{- end -}}
 
+{{- define "alquimia-slight.vlm.modelPvcName" -}}
+{{- if .Values.model.persistence.existingClaim -}}
+{{- .Values.model.persistence.existingClaim -}}
+{{- else -}}
+{{- printf "%s-models" (include "alquimia-slight.vlm.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "alquimia-slight.vlm.downloaderFullname" -}}
+{{- printf "%s-model-downloader" (include "alquimia-slight.vlm.fullname" .) -}}
+{{- end -}}
+
+{{/* Mount path of the model volume inside the container. */}}
+{{- define "alquimia-slight.vlm.modelMountPath" -}}
+{{- default "/models" .Values.model.mountPath -}}
+{{- end -}}
+
+{{/* Local model subdirectory. If unset, it is derived from servedName. */}}
+{{- define "alquimia-slight.vlm.modelLocalDir" -}}
+{{- if .Values.model.localDir -}}
+{{- .Values.model.localDir -}}
+{{- else -}}
+{{- .Values.model.servedName | replace "/" "-" | lower -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Absolute path to the model inside the container (mountPath + localDir). */}}
+{{- define "alquimia-slight.vlm.modelFullPath" -}}
+{{- printf "%s/%s" (include "alquimia-slight.vlm.modelMountPath" .) (include "alquimia-slight.vlm.modelLocalDir" .) -}}
+{{- end -}}
+
+{{/* HF repo id to download; defaults to model.servedName. */}}
+{{- define "alquimia-slight.vlm.downloader.repoId" -}}
+{{- default .Values.model.servedName .Values.model.downloader.repoId -}}
+{{- end -}}
+
+{{/* Downloader target subdirectory; defaults to modelLocalDir. */}}
+{{- define "alquimia-slight.vlm.downloader.targetSubdir" -}}
+{{- default (include "alquimia-slight.vlm.modelLocalDir" .) .Values.model.downloader.targetSubdir -}}
+{{- end -}}
+
 {{- define "alquimia-slight.web.fullname" -}}
 {{- printf "%s-web" (include "alquimia-slight.fullname" .) -}}
 {{- end -}}

@@ -1,1 +1,9 @@
 k8s/*
+tareas.txt
+
+# Local-only Kubernetes/Helm artifacts
+rendered-*.yaml
+
+# Helm dependency build output (regenerated from Chart.lock via `helm dependency build`)
+charts/*/charts/
+charts/*/charts/*.tgz

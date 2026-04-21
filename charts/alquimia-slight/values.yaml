@@ -163,7 +163,7 @@ minio:
       cpu: "1"
       memory: "1Gi"
 
-vlm:
+model:
   enabled: true
   replicaCount: 1
   runtimeClassName: nvidia
@@ -171,17 +171,68 @@ vlm:
     repository: vllm/vllm-openai
     digest: "sha256:2296a2a7e1ce1dc59c6577ba5900f4e9910b76c4a0cb134833a8137f92404dfa"
     pullPolicy: IfNotPresent
-  model:
-    name: qwen3-vl-8b
-    path: /models/qwen3-vl-8b
-    hostPath: /var/home/alquimia/models
-    apiKey: "change-me"
+  # Canonical Hugging Face model identifier. Used for --served-model-name
+  # and also as the default repoId for the downloader.
+  servedName: "Qwen/Qwen3-VL-8B-Instruct"
+  # Local subdirectory under mountPath where the model snapshot lives.
+  # If left empty, it is derived from servedName (slashes -> "-", lowercased).
+  localDir: ""
+  # Mount path of the model volume inside the container.
+  mountPath: /models
+  apiKey: "change-me"
+  # PVC that persists the downloaded model(s). It is kept across upgrades/uninstall
+  # (resource-policy: keep) to avoid re-downloading.
+  persistence:
+    size: 50Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    # If set, an existing PVC is used instead of creating a new one.
+    existingClaim: ""
+  # Pre-download Job that fetches the model from Hugging Face into the PVC.
+  # Runs as a post-install/post-upgrade hook and is idempotent (skipped if the model already exists).
+  downloader:
+    enabled: true
+    image:
+      repository: python
+      tag: "3.11-slim"
+      pullPolicy: IfNotPresent
+    # Hugging Face repo id to download. If empty, model.servedName is used.
+    repoId: ""
+    # Subdirectory inside the PVC where the snapshot is stored.
+    # If empty, model.localDir is used (derived from servedName when that is also empty).
+    targetSubdir: ""
+    # Optional HF repo revision / branch / tag.
+    revision: ""
+    # HF token for gated/private models (optional). Can also be provided via existingSecret.
+    hfToken: ""
+    # If set, HF_TOKEN is read from this secret (key HF_TOKEN) instead of the inline hfToken.
+    existingSecret: ""
+    # Speed up downloads with hf_transfer.
+    useHfTransfer: true
+    # Optional glob-style filters (passed as-is to snapshot_download).
+    allowPatterns: []
+    ignorePatterns: []
+    backoffLimit: 3
+    activeDeadlineSeconds: 7200
+    # Keep the Job around after completion so its logs can be inspected.
+    ttlSecondsAfterFinished: 3600
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
   service:
     type: ClusterIP
     port: 8000
-  args:
-    - "--model"
-    - "/models/qwen3-vl-8b"
+  # The --model and --served-model-name flags are injected automatically from model.servedName.
+  # Only list additional vLLM arguments here.
+  extraArgs:
     - "--host"
     - "0.0.0.0"
     - "--port"

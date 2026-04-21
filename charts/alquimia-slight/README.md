@@ -4,7 +4,7 @@ Helm chart scaffold and installation guide for **Alquimia Slight**, a product th
 
 ## Overview
 
-Alquimia Slight is designed to be deployed on **appliances / edge nodes**. Typical targets are **RHEL 10 AI** or **Ubuntu LTS**; use the bundled values files to match the OS profile and optional VLM.
+Alquimia Slight is designed to be deployed on **appliances / edge nodes**. Typical targets are **RHEL 10 AI** or **Ubuntu LTS**; use the bundled values files to match the OS profile. Both profiles ship the full stack including the GPU-backed VLM.
 
 The solution is composed of these main functional blocks:
 
@@ -22,18 +22,20 @@ The solution is composed of these main functional blocks:
   - RTSP / HLS / WebRTC streaming and recording
   - Optional dedicated namespace (default `media`)
   - HTTP authentication delegated to the BFF
-- **VLM**
-  - Vision-language model served with GPU support
+- **VLM (`model`)**
+  - Vision-language model served with vLLM and GPU support
+  - Model stored on a PVC (Longhorn by default)
+  - Optional Helm hook Job that pulls the model from Hugging Face into the PVC on install/upgrade
 
 ## Target platform
 
 This first version is intended for:
 
-- **RHEL 10 AI** (see `values-rhel10-ai.yaml`) or **Ubuntu LTS** (see `values-ubuntu.yaml`, VLM disabled)
+- **RHEL 10 AI** (see `values-rhel10-ai.yaml`) or **Ubuntu LTS** (see `values-ubuntu.yaml`)
 - **k3s**
 - **Longhorn**
 - Appliance or node-based deployments
-- Optional NVIDIA GPU support for the VLM component (not used in the Ubuntu profile)
+- NVIDIA GPU + runtime class `nvidia` for the VLM workload
 
 ## Prerequisites
 
@@ -53,7 +55,7 @@ Before installing the chart, make sure the target environment has the following:
 - NVIDIA drivers installed on the host
 - NVIDIA container runtime configured
 - NVIDIA device plugin deployed in the cluster
-- Model files available locally on the appliance/node
+- Either outbound internet access from the cluster (so the downloader Job can fetch the model from Hugging Face) or a pre-populated PVC (see `model.persistence.existingClaim`)
 
 ## Private container registry (important)
 
@@ -112,14 +114,16 @@ The MinIO component provides:
 - Internal service for API and console
 - Credentials managed through Secret
 
-### VLM
+### VLM (`model`)
 
 The VLM component provides:
 
-- vLLM-based model serving
-- GPU runtime support
-- Local model mount through `hostPath`
-- Offline model usage for appliance scenarios
+- vLLM-based OpenAI-compatible model serving
+- GPU runtime support via `runtimeClassName: nvidia`
+- Model snapshot stored on a dedicated PVC, mounted at `model.mountPath` (default `/models`). The PVC is annotated with `helm.sh/resource-policy: keep` so the downloaded weights survive `helm uninstall`.
+- Optional **model downloader Job** (`model.downloader.enabled`, default `true`) that runs as a `post-install` / `post-upgrade` Helm hook and pulls the model from Hugging Face into the PVC using `huggingface_hub.snapshot_download`. The Job is idempotent (skips the download when `config.json` already exists) and supports gated/private repos via `model.downloader.hfToken` (or an existing secret via `model.downloader.existingSecret`).
+- An `initContainer` in the Deployment blocks vLLM startup until the model files are ready on the PVC.
+- The flags `--model` and `--served-model-name` are injected automatically from `model.servedName` / `model.localDir`; only additional flags go into `model.extraArgs`.
 
 ### Web
 
@@ -127,7 +131,7 @@ The Web component provides:
 
 - Frontend container (`argos-web`)
 - Configuration via ConfigMap keys exposed as **container environment variables** (`envFrom` on the Deployment): `VITE_*` and MediaMTX-related hints for the runtime.
-- Optional **`web.externalHost`**: when set and the matching `web.config` fields are empty, the chart fills `VITE_BFF_URL` and WebRTC-related values from the public host plus BFF/web `NodePort` values (Helm-rendered ConfigMap only).
+- Optional **`global.host`**: when set and the matching `web.config` fields are empty, the chart fills `VITE_BFF_URL` and WebRTC-related values from the public host plus BFF/web `NodePort` values (Helm-rendered ConfigMap only).
 - Service type `ClusterIP` (internal only) or `NodePort` (optional fixed `nodePort`)
 
 ### MediaMTX
@@ -147,6 +151,7 @@ The MediaMTX component provides:
 ```yaml
 global:
   storageClass: longhorn
+  host: "192.168.77.143"
   imagePullSecrets:
     - regcred
 ```
@@ -210,15 +215,37 @@ minio:
     storageClass: longhorn
 ```
 
-### VLM
+### VLM (`model`)
+
+Minimal override (Hugging Face model, Longhorn-backed PVC, auto-download):
 
 ```yaml
-vlm:
+model:
   enabled: true
   runtimeClassName: nvidia
-  model:
-    hostPath: /var/home/alquimia/models
-    path: /models/qwen3-vl-8b
+  servedName: "Qwen/Qwen3-VL-8B-Instruct"
+  persistence:
+    size: 50Gi
+    # storageClass: ""  # empty -> falls back to global.storageClass (longhorn)
+  downloader:
+    enabled: true
+    # hfToken: "hf_xxx"  # only for gated/private repos
+```
+
+Switching to a different HF model only requires changing `model.servedName`; the
+values used for `--model`, `--served-model-name`, the downloader target, and
+the init container are all derived from it. Leave `model.localDir` empty to
+derive the subdirectory automatically (e.g. `qwen-qwen3-vl-8b-instruct`).
+
+To reuse an externally-populated PVC, skip the downloader and point to the
+existing claim:
+
+```yaml
+model:
+  downloader:
+    enabled: false
+  persistence:
+    existingClaim: my-preloaded-models-pvc
 ```
 
 ### Web
@@ -264,13 +291,25 @@ mediamtx:
 
 If the BFF runs in a different namespace than the Helm release, set `mediamtx.auth.bffNamespace` to that namespace. If the in-cluster BFF Service name does not match `<release>-bff`, set `mediamtx.auth.httpAddress` to the full URL (for example `http://argos-bff.bff.svc.cluster.local:8000/internal/media/auth`).
 
-### Ubuntu (VLM off)
+### Environment profiles
 
-Use `values-ubuntu.yaml` for an Ubuntu-oriented deployment **without** the VLM workload (`vlm.enabled: false`). It sets `product.os` and pins PostgreSQL/MinIO persistence to Longhorn, same style as `values-rhel10-ai.yaml` but without GPU/model settings. It also documents **`web.externalHost`**: set this manually to the IP or hostname clients use in the browser (Helm cannot infer it), or leave it empty and set `web.config` URLs explicitly.
+Both bundled profiles ship the same full stack (GPU-backed VLM included); they
+only differ in OS metadata and environment-specific secrets. They also document
+**`global.host`**: set this manually to the IP or hostname clients use in the
+browser (Helm cannot infer it), or leave it empty and set `web.config` URLs
+explicitly.
+
+- `values-rhel10-ai.yaml`: `product.os: "RHEL 10 AI"`, BFF bootstrap admin and
+  DB/MinIO credentials, Longhorn-backed PostgreSQL/MinIO persistence.
+- `values-ubuntu.yaml`: `product.os: "Ubuntu 22.04 LTS"`, sets `global.host`
+  to the appliance IP, same credentials structure. Assumes NVIDIA drivers and
+  runtime class are already configured on the host.
+
+To disable the VLM workload (for example for a CPU-only test), override
+explicitly:
 
 ```yaml
-# See values-ubuntu.yaml — key override:
-vlm:
+model:
   enabled: false
 ```
 
@@ -290,13 +329,13 @@ helm lint ./charts/alquimia-slight
 
 ### 3. Render manifests
 
-RHEL / VLM on:
+RHEL 10 AI:
 
 ```bash
 helm template alquimia-slight ./charts/alquimia-slight -f ./charts/alquimia-slight/values-rhel10-ai.yaml
 ```
 
-Ubuntu / VLM off:
+Ubuntu LTS:
 
 ```bash
 helm template alquimia-slight ./charts/alquimia-slight -f ./charts/alquimia-slight/values-ubuntu.yaml
@@ -304,7 +343,7 @@ helm template alquimia-slight ./charts/alquimia-slight -f ./charts/alquimia-slig
 
 ### 4. Install or upgrade
 
-RHEL / VLM on:
+RHEL 10 AI:
 
 ```bash
 helm upgrade --install alquimia-slight ./charts/alquimia-slight \
@@ -313,7 +352,7 @@ helm upgrade --install alquimia-slight ./charts/alquimia-slight \
   -f ./charts/alquimia-slight/values-rhel10-ai.yaml
 ```
 
-Ubuntu / VLM off:
+Ubuntu LTS:
 
 ```bash
 helm upgrade --install alquimia-slight ./charts/alquimia-slight \
@@ -341,21 +380,28 @@ helm install alquimia-slight alquimia-slight/alquimia-slight -n alquimia-slight 
 
 The NVIDIA device plugin should be managed as a **cluster prerequisite**, not as part of the application chart.
 
-### Local model path
+### Model storage
 
-If `vlm.enabled=true`, the model files must exist on the appliance/node under the configured host path, for example:
+When `model.enabled=true`, the chart creates a dedicated PVC (or reuses the one
+passed via `model.persistence.existingClaim`) and the Helm hook Job downloads
+the repo `model.servedName` from Hugging Face into it. The Job:
 
-```bash
-/var/home/alquimia/models
-```
+- Runs as `post-install,post-upgrade` and is recreated on each upgrade (`helm.sh/hook-delete-policy: before-hook-creation`).
+- Skips the download when `config.json` is already present in the target directory.
+- Uses `hf_transfer` for faster downloads (toggle with `model.downloader.useHfTransfer`).
+- Accepts an optional `HF_TOKEN` for gated or private repos via `model.downloader.hfToken` or an existing secret (`model.downloader.existingSecret`, key `HF_TOKEN`).
+
+The PVC carries `helm.sh/resource-policy: keep`, so `helm uninstall` does not
+delete the downloaded weights.
 
 ### Persistence
 
-The following components should use persistent storage:
+The following components use persistent storage:
 
 - PostgreSQL
 - MinIO
 - MediaMTX (recordings PVC), when `mediamtx.persistence.enabled` is true
+- VLM model weights (`<release>-vlm-models` PVC)
 
 ### Internal services
 
@@ -381,10 +427,10 @@ As the product evolves, consider adding:
 
 Alquimia Slight is a Helm-packaged appliance-oriented deployment for Alquimia Vision, designed for:
 
-- **RHEL 10 AI** or **Ubuntu LTS** (profile without VLM via `values-ubuntu.yaml`)
+- **RHEL 10 AI** or **Ubuntu LTS** (both profiles ship the full stack, VLM included)
 - **k3s**
 - **Longhorn**
-- optional **NVIDIA GPU** (VLM; omitted on the Ubuntu profile)
+- **NVIDIA GPU** for the VLM workload
 - **Web** UI and **MediaMTX** streaming where required
 - edge / appliance execution model
 

@@ -1,0 +1,21 @@
+{{- if and .Values.model.enabled (not .Values.model.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "alquimia-slight.vlm.modelPvcName" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vlm
+  annotations:
+    # Keep the PVC even if the release is uninstalled, so the downloaded model is not lost.
+    helm.sh/resource-policy: keep
+spec:
+  accessModes:
+    {{- range .Values.model.persistence.accessModes }}
+    - {{ . }}
+    {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.model.persistence.size }}
+  storageClassName: {{ default .Values.global.storageClass .Values.model.persistence.storageClass }}
+{{- end }}

@@ -1,0 +1,130 @@
+{{- if and .Values.model.enabled .Values.model.downloader.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "alquimia-slight.vlm.downloaderFullname" . }}
+  labels:
+    {{- include "alquimia-slight.labels" . | nindent 4 }}
+    app.kubernetes.io/component: vlm-model-downloader
+  annotations:
+    # Runs after the PVC is created, on every install/upgrade. Idempotent.
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: {{ .Values.model.downloader.backoffLimit }}
+  {{- with .Values.model.downloader.activeDeadlineSeconds }}
+  activeDeadlineSeconds: {{ . }}
+  {{- end }}
+  {{- with .Values.model.downloader.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "alquimia-slight.labels" . | nindent 8 }}
+        app.kubernetes.io/component: vlm-model-downloader
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.model.downloader.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.model.downloader.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.model.downloader.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: downloader
+          image: "{{ .Values.model.downloader.image.repository }}:{{ .Values.model.downloader.image.tag }}"
+          imagePullPolicy: {{ .Values.model.downloader.image.pullPolicy }}
+          env:
+            - name: HF_REPO_ID
+              value: {{ include "alquimia-slight.vlm.downloader.repoId" . | quote }}
+            - name: TARGET_DIR
+              value: {{ printf "%s/%s" (include "alquimia-slight.vlm.modelMountPath" .) (include "alquimia-slight.vlm.downloader.targetSubdir" .) | quote }}
+            - name: HF_HOME
+              value: {{ printf "%s/hf-cache" (include "alquimia-slight.vlm.modelMountPath" .) | quote }}
+            {{- with .Values.model.downloader.revision }}
+            - name: HF_REVISION
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.model.downloader.useHfTransfer }}
+            - name: HF_HUB_ENABLE_HF_TRANSFER
+              value: "1"
+            {{- end }}
+            {{- if .Values.model.downloader.allowPatterns }}
+            - name: ALLOW_PATTERNS
+              value: {{ join "," .Values.model.downloader.allowPatterns | quote }}
+            {{- end }}
+            {{- if .Values.model.downloader.ignorePatterns }}
+            - name: IGNORE_PATTERNS
+              value: {{ join "," .Values.model.downloader.ignorePatterns | quote }}
+            {{- end }}
+            {{- if or .Values.model.downloader.hfToken .Values.model.downloader.existingSecret }}
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ default (printf "%s-secret" (include "alquimia-slight.vlm.fullname" .)) .Values.model.downloader.existingSecret }}
+                  key: HF_TOKEN
+                  optional: true
+            {{- end }}
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -euo pipefail
+              echo "[downloader] installing huggingface_hub..."
+              pip install --no-cache-dir --disable-pip-version-check \
+                "huggingface_hub[cli]==0.25.2" \
+                {{- if .Values.model.downloader.useHfTransfer }} "hf_transfer==0.1.8"{{- end }}
+              mkdir -p "$TARGET_DIR"
+              if [ -f "$TARGET_DIR/config.json" ]; then
+                echo "[downloader] model already present at $TARGET_DIR, skipping download."
+                exit 0
+              fi
+              echo "[downloader] downloading $HF_REPO_ID -> $TARGET_DIR ..."
+              python - <<'PY'
+              import os
+              from huggingface_hub import snapshot_download
+              kwargs = dict(
+                  repo_id=os.environ["HF_REPO_ID"],
+                  local_dir=os.environ["TARGET_DIR"],
+                  local_dir_use_symlinks=False,
+              )
+              token = os.environ.get("HF_TOKEN")
+              if token:
+                  kwargs["token"] = token
+              revision = os.environ.get("HF_REVISION")
+              if revision:
+                  kwargs["revision"] = revision
+              allow = [p for p in os.environ.get("ALLOW_PATTERNS", "").split(",") if p]
+              if allow:
+                  kwargs["allow_patterns"] = allow
+              ignore = [p for p in os.environ.get("IGNORE_PATTERNS", "").split(",") if p]
+              if ignore:
+                  kwargs["ignore_patterns"] = ignore
+              path = snapshot_download(**kwargs)
+              print(f"[downloader] done at {path}")
+              PY
+              echo "[downloader] finished."
+          volumeMounts:
+            - name: model-store
+              mountPath: {{ include "alquimia-slight.vlm.modelMountPath" . }}
+          resources:
+            {{- toYaml .Values.model.downloader.resources | nindent 12 }}
+      volumes:
+        - name: model-store
+          persistentVolumeClaim:
+            claimName: {{ include "alquimia-slight.vlm.modelPvcName" . }}
+{{- end }}

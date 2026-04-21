@@ -1,4 +1,6 @@
-{{- if .Values.vlm.enabled }}
+{{- if .Values.model.enabled }}
+{{- $mountPath := include "alquimia-slight.vlm.modelMountPath" . -}}
+{{- $modelPath := include "alquimia-slight.vlm.modelFullPath" . -}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,7 +9,7 @@ metadata:
     {{- include "alquimia-slight.labels" . | nindent 4 }}
     app.kubernetes.io/component: vlm
 spec:
-  replicas: {{ .Values.vlm.replicaCount }}
+  replicas: {{ .Values.model.replicaCount }}
   selector:
     matchLabels:
       app: {{ include "alquimia-slight.vlm.fullname" . }}
@@ -17,17 +19,44 @@ spec:
         app: {{ include "alquimia-slight.vlm.fullname" . }}
         app.kubernetes.io/component: vlm
     spec:
-      runtimeClassName: {{ .Values.vlm.runtimeClassName }}
+      runtimeClassName: {{ .Values.model.runtimeClassName }}
       imagePullSecrets:
 {{- range .Values.global.imagePullSecrets }}
         - name: {{ . }}
 {{- end }}
+      initContainers:
+        - name: wait-for-model
+          image: busybox:1.36
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              target="{{ $modelPath }}/config.json"
+              echo "[wait-for-model] waiting for $target ..."
+              i=0
+              until [ -f "$target" ]; do
+                i=$((i+1))
+                if [ $((i % 12)) -eq 0 ]; then
+                  echo "[wait-for-model] still waiting ($((i*5))s)..."
+                fi
+                sleep 5
+              done
+              echo "[wait-for-model] model ready."
+          volumeMounts:
+            - name: model-store
+              mountPath: {{ $mountPath }}
       containers:
         - name: vllm
-          image: "{{ .Values.vlm.image.repository }}@{{ .Values.vlm.image.digest }}"
-          imagePullPolicy: {{ .Values.vlm.image.pullPolicy }}
+          image: "{{ .Values.model.image.repository }}@{{ .Values.model.image.digest }}"
+          imagePullPolicy: {{ .Values.model.image.pullPolicy }}
           args:
-{{ toYaml .Values.vlm.args | indent 12 }}
+            - "--model"
+            - {{ $modelPath | quote }}
+            - "--served-model-name"
+            - {{ .Values.model.servedName | quote }}
+            {{- range .Values.model.extraArgs }}
+            - {{ . | quote }}
+            {{- end }}
             - "--api-key"
             - "$(VLLM_API_KEY)"
           env:
@@ -37,22 +66,21 @@ spec:
                   name: {{ include "alquimia-slight.vlm.fullname" . }}-secret
                   key: VLLM_API_KEY
             - name: HF_HOME
-              value: {{ .Values.vlm.env.HF_HOME | quote }}
+              value: {{ .Values.model.env.HF_HOME | quote }}
             - name: HF_HUB_OFFLINE
-              value: {{ .Values.vlm.env.HF_HUB_OFFLINE | quote }}
+              value: {{ .Values.model.env.HF_HUB_OFFLINE | quote }}
             - name: TRANSFORMERS_OFFLINE
-              value: {{ .Values.vlm.env.TRANSFORMERS_OFFLINE | quote }}
+              value: {{ .Values.model.env.TRANSFORMERS_OFFLINE | quote }}
           ports:
             - name: http
-              containerPort: {{ .Values.vlm.service.port }}
+              containerPort: {{ .Values.model.service.port }}
           volumeMounts:
             - name: model-store
-              mountPath: /models
+              mountPath: {{ $mountPath }}
           resources:
-{{ toYaml .Values.vlm.resources | indent 12 }}
+{{ toYaml .Values.model.resources | indent 12 }}
       volumes:
         - name: model-store
-          hostPath:
-            path: {{ .Values.vlm.model.hostPath }}
-            type: Directory
+          persistentVolumeClaim:
+            claimName: {{ include "alquimia-slight.vlm.modelPvcName" . }}
 {{- end }}
