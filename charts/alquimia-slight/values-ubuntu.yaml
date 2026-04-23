@@ -7,6 +7,9 @@ global:
 product:
   os: "Ubuntu 22.04 LTS"
 
+model:
+  enabled: false
+
 bff:
   secret:
     jwtSecret: "jwtSecret"

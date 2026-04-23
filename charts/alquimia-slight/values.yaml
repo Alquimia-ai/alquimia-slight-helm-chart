@@ -379,7 +379,7 @@ observability:
   #      collector then forwards to the remote backend (see otelCollector.otlphttp).
   #   3. Otherwise the endpoint is empty and apps effectively run without OTel.
   apps:
-    enabled: true
+    enabled: false
     logsEnabled: "true"
     exporterOtlpProtocol: "http/protobuf"
     exporterOtlpEndpoint: ""
